@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#111827" />
+<title>我的收支紀錄</title>
+<style>
+:root{--bg:#f4f6f8;--panel:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--accent:#2563eb;--good:#047857;--warn:#b45309;--bad:#b91c1c;--shadow:0 10px 30px rgba(17,24,39,.06)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",Arial,sans-serif;color:var(--text)}
+.shell{max-width:1180px;margin:auto;padding:22px}.topbar{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:18px}.brand h1{font-size:24px;margin:0 0 4px}.brand p{margin:0;color:var(--muted);font-size:14px}.actions{display:flex;gap:8px;flex-wrap:wrap}
+button,.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;background:#111827;color:#fff;font-size:14px}.secondary{background:#fff;color:#111827;border:1px solid var(--line)}.danger{background:#fff;color:var(--bad);border:1px solid #fecaca}.small{padding:7px 10px;font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px}.kpi{grid-column:span 3}.kpi .label{font-size:13px;color:var(--muted)}.kpi .value{font-size:28px;font-weight:800;margin-top:7px;letter-spacing:-.5px}.kpi .sub{font-size:12px;color:var(--muted);margin-top:5px}
+.span7{grid-column:span 7}.span5{grid-column:span 5}.span12{grid-column:span 12}.section-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}.section-title h2{font-size:17px;margin:0}.section-title span{font-size:12px;color:var(--muted)}
+.form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.field label{display:block;font-size:12px;color:var(--muted);margin:0 0 5px}.field input,.field select{width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:14px;outline:none}.field input:focus,.field select:focus{border-color:#93c5fd;box-shadow:0 0 0 3px #dbeafe}.full{grid-column:1/-1}
+.bank-list,.cc-list{display:flex;flex-direction:column;gap:9px}.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid #f1f5f9}.row:last-child{border-bottom:0}.name{font-weight:700}.meta{font-size:12px;color:var(--muted);margin-top:3px}.money{font-weight:800;text-align:right}.money.neg{color:var(--bad)}.money.pos{color:var(--good)}
+.bar{height:7px;border-radius:999px;background:#eef2f7;overflow:hidden;margin-top:7px}.bar i{display:block;height:100%;background:#111827;border-radius:999px}.pill{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#eef2ff;color:#3730a3}.pill.expense{background:#fef2f2;color:#991b1b}.pill.income{background:#ecfdf5;color:#065f46}.pill.cardpay{background:#fff7ed;color:#9a3412}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;color:var(--muted);font-weight:700;padding:9px 8px;border-bottom:1px solid var(--line)}td{padding:10px 8px;border-bottom:1px solid #f3f4f6;vertical-align:middle}.right{text-align:right}.empty{text-align:center;padding:28px;color:var(--muted)}
+.modal{position:fixed;inset:0;background:rgba(17,24,39,.45);display:none;align-items:center;justify-content:center;padding:18px;z-index:10}.modal.show{display:flex}.modal-box{width:min(560px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:16px;padding:20px}.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}.modal-head h3{margin:0}.close{background:#f3f4f6;color:#111827;padding:8px 11px}.footer-note{font-size:12px;color:var(--muted);margin-top:14px;line-height:1.6}.toast{position:fixed;right:20px;bottom:20px;background:#111827;color:#fff;padding:11px 14px;border-radius:10px;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none}.toast.show{opacity:1;transform:none}
+@media(max-width:850px){.kpi{grid-column:span 6}.span7,.span5{grid-column:span 12}}@media(max-width:560px){.shell{padding:14px}.topbar{align-items:flex-start;flex-direction:column}.kpi{grid-column:span 12}.form-grid{grid-template-columns:1fr}.card{padding:15px}.kpi .value{font-size:25px}.table-wrap{overflow:auto}table{min-width:720px}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="topbar">
+    <div class="brand"><h1>我的收支紀錄</h1><p>銀行餘額、信用卡刷費與日常收支，一頁掌握</p></div>
+    <div class="actions">
+      <button onclick="openTxn()">＋ 新增紀錄</button>
+      <button class="secondary" onclick="openBankModal()">銀行設定</button>
+      <button class="secondary" onclick="openCardModal()">信用卡設定</button>
+      <button class="secondary" onclick="exportData()">匯出備份</button>
+      <label class="btn secondary" for="importFile">匯入備份</label><input id="importFile" type="file" accept="application/json" hidden />
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card kpi"><div class="label">銀行目前總額</div><div class="value" id="kBank">$0</div><div class="sub">初始餘額＋收入－支出－繳卡費</div></div>
+    <div class="card kpi"><div class="label">本月信用卡刷費</div><div class="value" id="kCard">$0</div><div class="sub" id="kCardSub">0 筆刷卡</div></div>
+    <div class="card kpi"><div class="label">本月收入</div><div class="value" id="kIncome">$0</div><div class="sub">依交易日期計算</div></div>
+    <div class="card kpi"><div class="label">本月現金支出</div><div class="value" id="kExpense">$0</div><div class="sub">不含信用卡刷費，避免重複計算</div></div>
+
+    <div class="card span7">
+      <div class="section-title"><h2>各家銀行餘額</h2><span>可直接調整初始餘額</span></div>
+      <div id="bankList" class="bank-list"></div>
+    </div>
+    <div class="card span5">
+      <div class="section-title"><h2>信用卡本月使用</h2><span>額度使用率</span></div>
+      <div id="cardList" class="cc-list"></div>
+    </div>
+
+    <div class="card span12">
+      <div class="section-title"><h2>快速登錄</h2><span>刷卡／收入／支出／繳卡費</span></div>
+      <form id="quickForm" class="form-grid">
+        <div class="field"><label>類型</label><select id="qType"><option value="card">信用卡刷費</option><option value="expense">銀行／現金支出</option><option value="income">收入</option><option value="cardpay">繳信用卡費</option></select></div>
+        <div class="field"><label>日期</label><input id="qDate" type="date" required /></div>
+        <div class="field"><label>帳戶／信用卡</label><select id="qAccount"></select></div>
+        <div class="field"><label>金額</label><input id="qAmount" type="number" min="0" step="1" placeholder="例如 1280" required /></div>
+        <div class="field"><label>分類</label><select id="qCategory"><option>餐飲</option><option>交通</option><option>生活</option><option>購物</option><option>娛樂</option><option>日用品</option><option>醫療</option><option>學校</option><option>保險</option><option>其他</option></select></div>
+        <div class="field"><label>備註</label><input id="qNote" placeholder="例如：客戶餐敘／停車費" /></div>
+        <div class="full"><button type="submit">儲存這筆紀錄</button></div>
+      </form>
+    </div>
+
+    <div class="card span12">
+      <div class="section-title"><h2>最近紀錄</h2><span id="txCount"></span></div>
+      <div class="table-wrap"><table><thead><tr><th>日期</th><th>類型</th><th>帳戶</th><th>分類</th><th>備註</th><th class="right">金額</th><th></th></tr></thead><tbody id="txBody"></tbody></table></div>
+    </div>
+  </div>
+  <div class="footer-note">資料目前儲存在這台裝置的瀏覽器 LocalStorage。GitHub Pages 可直接使用，但 GitHub Pages 本身不能安全地跨裝置寫入資料庫；若要手機、電腦同步，下一版可接 Supabase / Firebase。</div>
+</div>
+
+<div id="bankModal" class="modal"><div class="modal-box"><div class="modal-head"><h3>銀行設定</h3><button class="close" onclick="closeModal('bankModal')">關閉</button></div><div id="bankSettings"></div><div style="margin-top:14px"><button onclick="addBank()">＋ 新增銀行</button></div></div></div>
+<div id="cardModal" class="modal"><div class="modal-box"><div class="modal-head"><h3>信用卡設定</h3><button class="close" onclick="closeModal('cardModal')">關閉</button></div><div id="cardSettings"></div><div style="margin-top:14px"><button onclick="addCard()">＋ 新增信用卡</button></div></div></div>
+<div id="txnModal" class="modal"><div class="modal-box"><div class="modal-head"><h3>新增紀錄</h3><button class="close" onclick="closeModal('txnModal')">關閉</button></div><p style="color:#6b7280;font-size:13px">可直接使用首頁的快速登錄區；此按鈕會帶你到登錄表單。</p><button onclick="closeModal('txnModal');document.getElementById('qType').focus();window.scrollTo({top:document.getElementById('quickForm').offsetTop-30,behavior:'smooth'})">前往快速登錄</button></div></div>
+<div id="toast" class="toast"></div>
+
+<script>
+const KEY='finance-tracker-v1';
+const seed={
+  banks:[
+    {id:'esun',name:'玉山 (808)',initial:242471},
+    {id:'bot',name:'台灣 (004)',initial:26653},
+    {id:'first',name:'第一 (007)',initial:21948},
+    {id:'sinopac',name:'永豐 (807)',initial:32439.4},
+    {id:'cathay-bank',name:'國泰 (013)',initial:28877.6}
+  ],
+  cards:[
+    {id:'cathay-card',name:'國泰信用卡',limit:20000},
+    {id:'ctbc-card',name:'中信信用卡',limit:50000}
+  ],
+  transactions:[]
+};
+let data=load();
+function load(){try{const v=JSON.parse(localStorage.getItem(KEY));return v&&v.banks?v:structuredClone(seed)}catch(e){return structuredClone(seed)}}
+function save(){localStorage.setItem(KEY,JSON.stringify(data));render()}
+const money=n=>new Intl.NumberFormat('zh-TW',{style:'currency',currency:'TWD',maximumFractionDigits:0}).format(Number(n||0));
+const today=()=>new Date().toISOString().slice(0,10);
+const thisMonth=()=>today().slice(0,7);
+function bankBalance(id){let b=data.banks.find(x=>x.id===id);let v=Number(b?.initial||0);for(const t of data.transactions){if(t.accountId!==id)continue;if(t.type==='income')v+=Number(t.amount);if(t.type==='expense'||t.type==='cardpay')v-=Number(t.amount)}return v}
+function monthTx(type){return data.transactions.filter(t=>t.type===type&&t.date.slice(0,7)===thisMonth())}
+function render(){
+  const bankTotal=data.banks.reduce((s,b)=>s+bankBalance(b.id),0), cardMonth=monthTx('card'), cardTotal=cardMonth.reduce((s,t)=>s+Number(t.amount),0), income=monthTx('income').reduce((s,t)=>s+Number(t.amount),0), expense=monthTx('expense').reduce((s,t)=>s+Number(t.amount),0);
+  kBank.textContent=money(bankTotal);kCard.textContent=money(cardTotal);kCardSub.textContent=`${cardMonth.length} 筆刷卡`;kIncome.textContent=money(income);kExpense.textContent=money(expense);
+  bankList.innerHTML=data.banks.map(b=>`<div class="row"><div><div class="name">${esc(b.name)}</div><div class="meta">初始 ${money(b.initial)}</div></div><div class="money ${bankBalance(b.id)<0?'neg':'pos'}">${money(bankBalance(b.id))}</div></div>`).join('')||'<div class="empty">尚未設定銀行</div>';
+  cardList.innerHTML=data.cards.map(c=>{const used=cardMonth.filter(t=>t.accountId===c.id).reduce((s,t)=>s+Number(t.amount),0), pct=c.limit?Math.min(100,used/c.limit*100):0;return `<div class="row"><div style="flex:1"><div class="name">${esc(c.name)}</div><div class="meta">已刷 ${money(used)} ／ 額度 ${money(c.limit)}</div><div class="bar"><i style="width:${pct}%"></i></div></div><div class="money">${pct.toFixed(0)}%</div></div>`}).join('')||'<div class="empty">尚未設定信用卡</div>';
+  const sorted=[...data.transactions].sort((a,b)=>(b.date+b.createdAt).localeCompare(a.date+a.createdAt));txCount.textContent=`共 ${sorted.length} 筆`;
+  txBody.innerHTML=sorted.slice(0,30).map(t=>{let typeMap={card:['刷卡','expense'],expense:['支出','expense'],income:['收入','income'],cardpay:['繳卡費','cardpay']};let acct=[...data.banks,...data.cards].find(a=>a.id===t.accountId)?.name||'—';let sign=t.type==='income'?'+':'-';return `<tr><td>${t.date}</td><td><span class="pill ${typeMap[t.type][1]}">${typeMap[t.type][0]}</span></td><td>${esc(acct)}</td><td>${esc(t.category||'')}</td><td>${esc(t.note||'')}</td><td class="right money ${t.type==='income'?'pos':'neg'}">${sign}${money(t.amount)}</td><td class="right"><button class="danger small" onclick="delTx('${t.id}')">刪除</button></td></tr>`}).join('')||'<tr><td colspan="7" class="empty">尚無紀錄，先新增第一筆。</td></tr>';
+  refreshAccounts();renderBankSettings();renderCardSettings();
+}
+function refreshAccounts(){const type=qType.value;let arr=(type==='card')?data.cards:data.banks;qAccount.innerHTML=arr.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}
+qType.addEventListener('change',refreshAccounts);qDate.value=today();
+quickForm.addEventListener('submit',e=>{e.preventDefault();const amount=Number(qAmount.value);if(!amount||amount<=0)return toast('請輸入正確金額');data.transactions.push({id:crypto.randomUUID?crypto.randomUUID():Date.now().toString(),type:qType.value,date:qDate.value,accountId:qAccount.value,amount,category:qCategory.value,note:qNote.value.trim(),createdAt:new Date().toISOString()});qAmount.value='';qNote.value='';save();toast('已儲存')});
+function delTx(id){if(confirm('確定刪除這筆紀錄？')){data.transactions=data.transactions.filter(t=>t.id!==id);save()}}
+function renderBankSettings(){bankSettings.innerHTML=data.banks.map((b,i)=>`<div class="form-grid" style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #eee"><div class="field"><label>銀行名稱</label><input value="${attr(b.name)}" onchange="data.banks[${i}].name=this.value;save()"></div><div class="field"><label>初始餘額</label><input type="number" step="0.1" value="${b.initial}" onchange="data.banks[${i}].initial=Number(this.value);save()"></div><div class="full"><button class="danger small" onclick="removeBank('${b.id}')">刪除銀行</button></div></div>`).join('')}
+function renderCardSettings(){cardSettings.innerHTML=data.cards.map((c,i)=>`<div class="form-grid" style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #eee"><div class="field"><label>信用卡名稱</label><input value="${attr(c.name)}" onchange="data.cards[${i}].name=this.value;save()"></div><div class="field"><label>信用額度</label><input type="number" value="${c.limit}" onchange="data.cards[${i}].limit=Number(this.value);save()"></div><div class="full"><button class="danger small" onclick="removeCard('${c.id}')">刪除信用卡</button></div></div>`).join('')}
+function addBank(){data.banks.push({id:'bank-'+Date.now(),name:'新銀行',initial:0});save()}
+function addCard(){data.cards.push({id:'card-'+Date.now(),name:'新信用卡',limit:0});save()}
+function removeBank(id){if(data.transactions.some(t=>t.accountId===id))return toast('此銀行已有交易，請先刪除相關交易');data.banks=data.banks.filter(x=>x.id!==id);save()}
+function removeCard(id){if(data.transactions.some(t=>t.accountId===id))return toast('此信用卡已有交易，請先刪除相關交易');data.cards=data.cards.filter(x=>x.id!==id);save()}
+function openBankModal(){bankModal.classList.add('show')}function openCardModal(){cardModal.classList.add('show')}function openTxn(){txnModal.classList.add('show')}function closeModal(id){document.getElementById(id).classList.remove('show')}
+function exportData(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`finance-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
+importFile.addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const parsed=JSON.parse(await f.text());if(!parsed.banks||!parsed.cards||!parsed.transactions)throw 0;data=parsed;save();toast('備份已匯入')}catch{alert('備份檔格式不正確')}e.target.value=''})
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1600)}
+function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}function attr(s=''){return esc(s)}
+render();
+</script>
+</body>
+</html>
