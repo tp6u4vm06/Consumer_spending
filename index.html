@@ -6,6 +6,8 @@
 <meta name="theme-color" content="#111827" />
 <title>我的收支紀錄</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
 <style>
 :root{--bg:#f4f6f8;--panel:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--accent:#2563eb;--good:#047857;--warn:#b45309;--bad:#b91c1c;--shadow:0 10px 30px rgba(17,24,39,.06)}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",Arial,sans-serif;color:var(--text)}
@@ -21,6 +23,7 @@ button,.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor
 table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;color:var(--muted);font-weight:700;padding:9px 8px;border-bottom:1px solid var(--line)}td{padding:10px 8px;border-bottom:1px solid #f3f4f6;vertical-align:middle}.right{text-align:right}.empty{text-align:center;padding:28px;color:var(--muted)}
 .searchbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.searchbar input{min-width:250px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:14px}
 .modal{position:fixed;inset:0;background:rgba(17,24,39,.45);display:none;align-items:center;justify-content:center;padding:18px;z-index:10}.modal.show{display:flex}.modal-box{width:min(560px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:16px;padding:20px}.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}.modal-head h3{margin:0}.close{background:#f3f4f6;color:#111827;padding:8px 11px}.footer-note{font-size:12px;color:var(--muted);margin-top:14px;line-height:1.6}.toast{position:fixed;right:20px;bottom:20px;background:#111827;color:#fff;padding:11px 14px;border-radius:10px;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none}.toast.show{opacity:1;transform:none}
+.auth-gate{position:fixed;inset:0;background:rgba(244,246,248,.98);z-index:100;display:flex;align-items:center;justify-content:center;padding:18px}.auth-gate.hidden{display:none}.auth-box{width:min(430px,100%);background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:24px}.auth-box h2{margin:0 0 8px}.auth-box p{color:var(--muted);font-size:13px;line-height:1.6}.auth-box input{width:100%;padding:11px;border:1px solid var(--line);border-radius:9px;margin:5px 0 10px;font-size:14px}.auth-buttons{display:flex;gap:8px}.auth-buttons button{flex:1}.cloud-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:#fff;font-size:12px;font-weight:700}.dot{width:8px;height:8px;border-radius:50%;background:#9ca3af}.dot.ok{background:#10b981}.dot.sync{background:#f59e0b}.dot.bad{background:#ef4444}.sync-note{font-size:12px;color:var(--muted);margin-top:7px}.config-help{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px;color:#9a3412;font-size:12px;line-height:1.55;margin-top:10px}
 @media(max-width:940px){.kpi{grid-column:span 6}.form-grid{grid-template-columns:repeat(2,1fr)}.quick-submit{grid-column:1/-1}.quick-submit button{width:100%}}
 @media(max-width:620px){.shell{padding:14px}.topbar{align-items:flex-start;flex-direction:column}.kpi{grid-column:span 12}.bank-grid{grid-template-columns:1fr}.bank-item{border-bottom:1px solid #f1f5f9!important}.bank-item:last-child{border-bottom:0!important}.form-grid{grid-template-columns:1fr}.quick-submit{grid-column:auto}.card-grid{grid-template-columns:1fr}.card{padding:15px}.kpi .value{font-size:25px}.table-wrap{overflow:auto}table{min-width:760px}.searchbar input{min-width:0;width:100%}.monthbar{align-items:flex-start;flex-direction:column}}
 </style>
@@ -30,6 +33,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
   <div class="topbar">
     <div class="brand"><h1>我的收支紀錄</h1><p>銀行餘額、信用卡刷費與每月收支，一頁掌握</p></div>
     <div class="actions">
+      <div class="cloud-chip"><span id="cloudDot" class="dot"></span><span id="cloudStatus">未登入</span></div>
+      <button id="logoutBtn" class="secondary" onclick="signOutUser()" style="display:none">登出</button>
       <button class="secondary" onclick="openBankModal()">銀行設定</button>
       <button class="secondary" onclick="openCardModal()">信用卡設定</button>
       <button class="secondary" onclick="exportExcel()">匯出 Excel</button>
@@ -78,7 +83,21 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
       <div class="table-wrap"><table><thead><tr><th>日期</th><th>類型</th><th>帳戶</th><th>分類</th><th>備註</th><th class="right">金額</th><th></th></tr></thead><tbody id="txBody"></tbody></table></div>
     </div>
   </div>
-  <div class="footer-note">資料儲存在目前裝置的瀏覽器 LocalStorage。GitHub Pages 可直接使用；若要手機與電腦自動同步，可再接 Supabase / Firebase。建議定期使用「匯出 Excel」或「JSON 備份」。</div>
+  <div class="footer-note">主要資料儲存在 Supabase 雲端，同一帳號在手機、電腦與不同瀏覽器會讀取同一份紀錄；瀏覽器 LocalStorage 僅作為暫存與離線備援。建議仍定期匯出 Excel。</div>
+</div>
+
+<div id="authGate" class="auth-gate">
+  <div class="auth-box">
+    <h2>我的收支紀錄</h2>
+    <p>登入後即可跨手機、電腦同步同一份銀行與信用卡紀錄。</p>
+    <div id="configWarning" class="config-help" style="display:none">尚未設定 Supabase。請先依 README 修改 <b>config.js</b> 的 Project URL 與 Publishable Key，再重新部署 GitHub Pages。</div>
+    <div id="authForm">
+      <input id="authEmail" type="email" autocomplete="email" placeholder="Email" />
+      <input id="authPassword" type="password" autocomplete="current-password" placeholder="密碼（至少 6 碼）" />
+      <div class="auth-buttons"><button onclick="signInUser()">登入</button><button class="secondary" onclick="signUpUser()">第一次建立帳號</button></div>
+      <div id="authMessage" class="sync-note"></div>
+    </div>
+  </div>
 </div>
 
 <div id="bankModal" class="modal"><div class="modal-box"><div class="modal-head"><h3>銀行設定</h3><button class="close" onclick="closeModal('bankModal')">關閉</button></div><div id="bankSettings"></div><div style="margin-top:14px"><button onclick="addBank()">＋ 新增銀行</button></div></div></div>
@@ -87,6 +106,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
 
 <script>
 const KEY='finance-tracker-v1';
+const PENDING_KEY='finance-tracker-pending-sync';
 const requiredBanks=[
   {id:'esun',name:'玉山 (緊急)',initial:242471},
   {id:'bot',name:'台灣 (學貸)',initial:26653},
@@ -97,13 +117,33 @@ const requiredBanks=[
   {id:'line-bank',name:'LINE BANK',initial:0}
 ];
 const seed={banks:structuredClone(requiredBanks),cards:[{id:'cathay-card',name:'國泰信用卡',limit:20000},{id:'ctbc-card',name:'中信信用卡',limit:50000}],transactions:[]};
-let data=load();
+const cfg=window.FINANCE_CONFIG||{};
+const configured=!!(cfg.SUPABASE_URL&&cfg.SUPABASE_PUBLISHABLE_KEY&&!cfg.SUPABASE_URL.includes('YOUR_PROJECT_ID')&&!cfg.SUPABASE_PUBLISHABLE_KEY.includes('YOUR_PUBLISHABLE_KEY'));
+const sb=configured?supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}):null;
+let currentUser=null;
+let data=loadLocal();
 let selectedMonth=currentMonth();
+let saving=false;
 function currentMonth(){return new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Taipei'}).slice(0,7)}
 function today(){return new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Taipei'})}
-function load(){try{const v=JSON.parse(localStorage.getItem(KEY));if(!v||!v.banks)return structuredClone(seed);return migrate(v)}catch(e){return structuredClone(seed)}}
+function hasMeaningfulLocal(v){return !!(v&&(v.transactions?.length||v.banks?.some((b,i)=>Number(b.initial)!==Number(requiredBanks.find(x=>x.id===b.id)?.initial||0))||v.cards?.length>2))}
+function loadLocal(){try{const v=JSON.parse(localStorage.getItem(KEY));return v&&v.banks?migrate(v):structuredClone(seed)}catch(e){return structuredClone(seed)}}
 function migrate(v){v.cards=Array.isArray(v.cards)?v.cards:[];v.transactions=Array.isArray(v.transactions)?v.transactions:[];v.banks=Array.isArray(v.banks)?v.banks:[];for(const rb of requiredBanks){const ex=v.banks.find(b=>b.id===rb.id);if(ex){ex.name=rb.name}else{v.banks.push(structuredClone(rb))}}v.banks.sort((a,b)=>{const order=requiredBanks.map(x=>x.id);const ai=order.indexOf(a.id),bi=order.indexOf(b.id);return (ai<0?99:ai)-(bi<0?99:bi)});return v}
-function save(){localStorage.setItem(KEY,JSON.stringify(data));render()}
+function cacheLocal(pending=false){localStorage.setItem(KEY,JSON.stringify(data));localStorage.setItem(PENDING_KEY,pending?'1':'0')}
+function setCloudState(state,text){cloudStatus.textContent=text;cloudDot.className='dot '+state}
+async function save(showMessage=false){cacheLocal(true);render();if(!currentUser||!sb){if(showMessage)toast('已暫存在本機');return}if(saving)return;saving=true;setCloudState('sync','同步中…');try{const {error}=await sb.from('finance_data').upsert({user_id:currentUser.id,data,updated_at:new Date().toISOString()},{onConflict:'user_id'});if(error)throw error;cacheLocal(false);setCloudState('ok','雲端已同步');if(showMessage)toast('已儲存並同步')}catch(e){console.error(e);setCloudState('bad','同步失敗');if(showMessage)toast('已存本機，雲端同步失敗')}finally{saving=false}}
+async function loadCloud(){if(!currentUser)return;setCloudState('sync','讀取雲端…');const {data:row,error}=await sb.from('finance_data').select('data,updated_at').eq('user_id',currentUser.id).maybeSingle();if(error){setCloudState('bad','讀取失敗');throw error}
+  const pending=localStorage.getItem(PENDING_KEY)==='1';
+  if(row?.data&&!pending){data=migrate(row.data);cacheLocal(false)}
+  else if(row?.data&&pending){data=migrate(loadLocal());await save(false)}
+  else {data=migrate(hasMeaningfulLocal(data)?data:structuredClone(seed));await save(false)}
+  render();setCloudState('ok','雲端已同步')
+}
+async function signInUser(){if(!configured)return;const email=authEmail.value.trim(),password=authPassword.value;if(!email||!password){authMessage.textContent='請輸入 Email 與密碼';return}authMessage.textContent='登入中…';const {error}=await sb.auth.signInWithPassword({email,password});authMessage.textContent=error?('登入失敗：'+error.message):''}
+async function signUpUser(){if(!configured)return;const email=authEmail.value.trim(),password=authPassword.value;if(!email||password.length<6){authMessage.textContent='請輸入 Email，密碼至少 6 碼';return}authMessage.textContent='建立帳號中…';const {data:res,error}=await sb.auth.signUp({email,password});if(error){authMessage.textContent='建立失敗：'+error.message;return}authMessage.textContent=res.session?'帳號建立完成，正在登入…':'帳號已建立。若 Supabase 啟用 Email 驗證，請先到信箱完成驗證再登入。'}
+async function signOutUser(){if(!sb)return;await sb.auth.signOut();currentUser=null;logoutBtn.style.display='none';authGate.classList.remove('hidden');setCloudState('','未登入')}
+async function applySession(session){currentUser=session?.user||null;if(currentUser){authGate.classList.add('hidden');logoutBtn.style.display='inline-block';await loadCloud()}else{authGate.classList.remove('hidden');logoutBtn.style.display='none';setCloudState('','未登入')}}
+async function bootstrap(){qDate.value=today();render();if(!configured){configWarning.style.display='block';authForm.style.opacity='.45';authForm.style.pointerEvents='none';setCloudState('bad','待設定 Supabase');return}const {data:{session}}=await sb.auth.getSession();await applySession(session);sb.auth.onAuthStateChange((_event,session)=>{setTimeout(()=>applySession(session),0)});window.addEventListener('online',()=>{if(currentUser&&localStorage.getItem(PENDING_KEY)==='1')save(false)})}
 const money=n=>new Intl.NumberFormat('zh-TW',{style:'currency',currency:'TWD',maximumFractionDigits:0}).format(Number(n||0));
 function bankBalance(id){let b=data.banks.find(x=>x.id===id);let v=Number(b?.initial||0);for(const t of data.transactions){if(t.accountId!==id)continue;if(t.type==='income')v+=Number(t.amount);if(t.type==='expense'||t.type==='cardpay')v-=Number(t.amount)}return v}
 function monthTx(type,month=selectedMonth){return data.transactions.filter(t=>t.type===type&&t.date?.slice(0,7)===month)}
@@ -116,39 +156,24 @@ function render(){
   cardList.innerHTML=data.cards.map(c=>{const used=cardMonth.filter(t=>t.accountId===c.id).reduce((s,t)=>s+Number(t.amount),0),pct=c.limit?Math.min(100,used/c.limit*100):0;return `<div class="cc-box"><div class="cc-top"><div><div class="name">${esc(c.name)}</div><div class="meta">額度 ${money(c.limit)}</div></div><div class="meta">${pct.toFixed(0)}%</div></div><div class="money">${money(used)}</div><div class="bar"><i style="width:${pct}%"></i></div></div>`}).join('')||'<div class="empty">尚未設定信用卡</div>';
   renderTransactions();refreshAccounts();renderBankSettings();renderCardSettings();
 }
-function renderTransactions(){
-  const q=(txSearch.value||'').trim().toLowerCase();const allAccounts=[...data.banks,...data.cards];
-  let rows=data.transactions.filter(t=>t.date?.slice(0,7)===selectedMonth).filter(t=>{if(!q)return true;const acct=allAccounts.find(a=>a.id===t.accountId)?.name||'';return [acct,t.category,t.note,t.date].some(v=>String(v||'').toLowerCase().includes(q))}).sort((a,b)=>(b.date+(b.createdAt||'')).localeCompare(a.date+(a.createdAt||'')));
-  txCount.textContent=`${monthText(selectedMonth)}共 ${rows.length} 筆`;
-  txBody.innerHTML=rows.map(t=>{let typeMap={card:['刷卡','expense'],expense:['支出','expense'],income:['收入','income'],cardpay:['繳卡費','cardpay']};let acct=allAccounts.find(a=>a.id===t.accountId)?.name||'—';let sign=t.type==='income'?'+':'-';return `<tr><td>${t.date}</td><td><span class="pill ${typeMap[t.type]?.[1]||''}">${typeMap[t.type]?.[0]||t.type}</span></td><td>${esc(acct)}</td><td>${esc(t.category||'')}</td><td>${esc(t.note||'')}</td><td class="right money ${t.type==='income'?'pos':'neg'}">${sign}${money(t.amount)}</td><td class="right"><button class="danger small" onclick="delTx('${t.id}')">刪除</button></td></tr>`}).join('')||'<tr><td colspan="7" class="empty">這個月份沒有符合條件的紀錄。</td></tr>';
-}
+function renderTransactions(){const q=(txSearch.value||'').trim().toLowerCase();const allAccounts=[...data.banks,...data.cards];let rows=data.transactions.filter(t=>t.date?.slice(0,7)===selectedMonth).filter(t=>{if(!q)return true;const acct=allAccounts.find(a=>a.id===t.accountId)?.name||'';return [acct,t.category,t.note,t.date].some(v=>String(v||'').toLowerCase().includes(q))}).sort((a,b)=>(b.date+(b.createdAt||'')).localeCompare(a.date+(a.createdAt||'')));txCount.textContent=`${monthText(selectedMonth)}共 ${rows.length} 筆`;txBody.innerHTML=rows.map(t=>{let typeMap={card:['刷卡','expense'],expense:['支出','expense'],income:['收入','income'],cardpay:['繳卡費','cardpay']};let acct=allAccounts.find(a=>a.id===t.accountId)?.name||'—';let sign=t.type==='income'?'+':'-';return `<tr><td>${t.date}</td><td><span class="pill ${typeMap[t.type]?.[1]||''}">${typeMap[t.type]?.[0]||t.type}</span></td><td>${esc(acct)}</td><td>${esc(t.category||'')}</td><td>${esc(t.note||'')}</td><td class="right money ${t.type==='income'?'pos':'neg'}">${sign}${money(t.amount)}</td><td class="right"><button class="danger small" onclick="delTx('${t.id}')">刪除</button></td></tr>`}).join('')||'<tr><td colspan="7" class="empty">這個月份沒有符合條件的紀錄。</td></tr>'}
 function refreshAccounts(){const type=qType.value;let arr=(type==='card')?data.cards:data.banks;qAccount.innerHTML=arr.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}
-qType.addEventListener('change',refreshAccounts);qDate.value=today();
-monthPicker.addEventListener('change',()=>{if(monthPicker.value){selectedMonth=monthPicker.value;render()}});txSearch.addEventListener('input',renderTransactions);
+qType.addEventListener('change',refreshAccounts);monthPicker.addEventListener('change',()=>{if(monthPicker.value){selectedMonth=monthPicker.value;render()}});txSearch.addEventListener('input',renderTransactions);
 function moveMonth(delta){let [y,m]=selectedMonth.split('-').map(Number);m+=delta;if(m<1){m=12;y--}if(m>12){m=1;y++}selectedMonth=`${y}-${String(m).padStart(2,'0')}`;render()}
 function goCurrentMonth(){selectedMonth=currentMonth();render()}function clearSearch(){txSearch.value='';renderTransactions()}
-quickForm.addEventListener('submit',e=>{e.preventDefault();const amount=Number(qAmount.value);if(!amount||amount<=0)return toast('請輸入正確金額');data.transactions.push({id:crypto.randomUUID?crypto.randomUUID():Date.now().toString(),type:qType.value,date:qDate.value,accountId:qAccount.value,amount,category:qCategory.value,note:qNote.value.trim(),createdAt:new Date().toISOString()});selectedMonth=qDate.value.slice(0,7);qAmount.value='';qNote.value='';save();toast('已儲存')});
-function delTx(id){if(confirm('確定刪除這筆紀錄？')){data.transactions=data.transactions.filter(t=>t.id!==id);save()}}
-function renderBankSettings(){bankSettings.innerHTML=data.banks.map((b,i)=>`<div class="form-grid" style="grid-template-columns:1fr 1fr;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #eee"><div class="field"><label>銀行名稱</label><input value="${attr(b.name)}" onchange="data.banks[${i}].name=this.value;save()"></div><div class="field"><label>初始餘額</label><input type="number" step="0.1" value="${b.initial}" onchange="data.banks[${i}].initial=Number(this.value);save()"></div><div style="grid-column:1/-1"><button class="danger small" onclick="removeBank('${b.id}')">刪除銀行</button></div></div>`).join('')}
-function renderCardSettings(){cardSettings.innerHTML=data.cards.map((c,i)=>`<div class="form-grid" style="grid-template-columns:1fr 1fr;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #eee"><div class="field"><label>信用卡名稱</label><input value="${attr(c.name)}" onchange="data.cards[${i}].name=this.value;save()"></div><div class="field"><label>信用額度</label><input type="number" value="${c.limit}" onchange="data.cards[${i}].limit=Number(this.value);save()"></div><div style="grid-column:1/-1"><button class="danger small" onclick="removeCard('${c.id}')">刪除信用卡</button></div></div>`).join('')}
-function addBank(){data.banks.push({id:'bank-'+Date.now(),name:'新銀行',initial:0});save()}function addCard(){data.cards.push({id:'card-'+Date.now(),name:'新信用卡',limit:0});save()}
-function removeBank(id){if(data.transactions.some(t=>t.accountId===id))return toast('此銀行已有交易，請先刪除相關交易');data.banks=data.banks.filter(x=>x.id!==id);save()}function removeCard(id){if(data.transactions.some(t=>t.accountId===id))return toast('此信用卡已有交易，請先刪除相關交易');data.cards=data.cards.filter(x=>x.id!==id);save()}
+quickForm.addEventListener('submit',async e=>{e.preventDefault();const amount=Number(qAmount.value);if(!amount||amount<=0)return toast('請輸入正確金額');data.transactions.push({id:crypto.randomUUID?crypto.randomUUID():Date.now().toString(),type:qType.value,date:qDate.value,accountId:qAccount.value,amount,category:qCategory.value,note:qNote.value.trim(),createdAt:new Date().toISOString()});selectedMonth=qDate.value.slice(0,7);qAmount.value='';qNote.value='';await save(true)});
+async function delTx(id){if(confirm('確定刪除這筆紀錄？')){data.transactions=data.transactions.filter(t=>t.id!==id);await save(true)}}
+function renderBankSettings(){bankSettings.innerHTML=data.banks.map((b,i)=>`<div class="form-grid" style="grid-template-columns:1fr 1fr;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #eee"><div class="field"><label>銀行名稱</label><input value="${attr(b.name)}" onchange="data.banks[${i}].name=this.value;save(true)"></div><div class="field"><label>初始餘額</label><input type="number" step="0.1" value="${b.initial}" onchange="data.banks[${i}].initial=Number(this.value);save(true)"></div><div style="grid-column:1/-1"><button class="danger small" onclick="removeBank('${b.id}')">刪除銀行</button></div></div>`).join('')}
+function renderCardSettings(){cardSettings.innerHTML=data.cards.map((c,i)=>`<div class="form-grid" style="grid-template-columns:1fr 1fr;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #eee"><div class="field"><label>信用卡名稱</label><input value="${attr(c.name)}" onchange="data.cards[${i}].name=this.value;save(true)"></div><div class="field"><label>信用額度</label><input type="number" value="${c.limit}" onchange="data.cards[${i}].limit=Number(this.value);save(true)"></div><div style="grid-column:1/-1"><button class="danger small" onclick="removeCard('${c.id}')">刪除信用卡</button></div></div>`).join('')}
+async function addBank(){data.banks.push({id:'bank-'+Date.now(),name:'新銀行',initial:0});await save(true)}async function addCard(){data.cards.push({id:'card-'+Date.now(),name:'新信用卡',limit:0});await save(true)}
+async function removeBank(id){if(data.transactions.some(t=>t.accountId===id))return toast('此銀行已有交易，請先刪除相關交易');data.banks=data.banks.filter(x=>x.id!==id);await save(true)}async function removeCard(id){if(data.transactions.some(t=>t.accountId===id))return toast('此信用卡已有交易，請先刪除相關交易');data.cards=data.cards.filter(x=>x.id!==id);await save(true)}
 function openBankModal(){bankModal.classList.add('show')}function openCardModal(){cardModal.classList.add('show')}function closeModal(id){document.getElementById(id).classList.remove('show')}
 function exportData(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`finance-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
-function exportExcel(){
-  if(typeof XLSX==='undefined'){alert('Excel 匯出元件尚未載入，請確認目前有網路連線後再試。');return}
-  const allAccounts=[...data.banks,...data.cards];const typeName={card:'信用卡刷費',expense:'銀行／現金支出',income:'收入',cardpay:'繳信用卡費'};
-  const tx=[...data.transactions].sort((a,b)=>a.date.localeCompare(b.date)).map(t=>({'日期':t.date,'月份':t.date.slice(0,7),'類型':typeName[t.type]||t.type,'帳戶／信用卡':allAccounts.find(a=>a.id===t.accountId)?.name||'','分類':t.category||'','備註':t.note||'','金額':Number(t.amount)}));
-  const banks=data.banks.map(b=>({'銀行':b.name,'初始餘額':Number(b.initial),'目前餘額':bankBalance(b.id)}));
-  const cardUsage=data.cards.map(c=>{const used=monthTx('card').filter(t=>t.accountId===c.id).reduce((s,t)=>s+Number(t.amount),0);return {'月份':selectedMonth,'信用卡':c.name,'信用額度':Number(c.limit),'本月已刷':used,'額度使用率':c.limit?used/Number(c.limit):0}});
-  const wb=XLSX.utils.book_new();const wsTx=XLSX.utils.json_to_sheet(tx);const wsBank=XLSX.utils.json_to_sheet(banks);const wsCard=XLSX.utils.json_to_sheet(cardUsage);
-  wsTx['!cols']=[{wch:12},{wch:10},{wch:16},{wch:20},{wch:12},{wch:28},{wch:14}];wsBank['!cols']=[{wch:20},{wch:16},{wch:16}];wsCard['!cols']=[{wch:10},{wch:20},{wch:16},{wch:16},{wch:14}];
-  XLSX.utils.book_append_sheet(wb,wsTx,'全部收支明細');XLSX.utils.book_append_sheet(wb,wsBank,'銀行餘額');XLSX.utils.book_append_sheet(wb,wsCard,`${selectedMonth}信用卡`);XLSX.writeFile(wb,`收支紀錄-${today()}.xlsx`);toast('Excel 已匯出');
-}
-importFile.addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const parsed=JSON.parse(await f.text());if(!parsed.banks||!parsed.cards||!parsed.transactions)throw 0;data=migrate(parsed);save();toast('備份已匯入')}catch{alert('備份檔格式不正確')}e.target.value=''})
-function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1600)}
+function exportExcel(){if(typeof XLSX==='undefined'){alert('Excel 匯出元件尚未載入，請確認目前有網路連線後再試。');return}const allAccounts=[...data.banks,...data.cards];const typeName={card:'信用卡刷費',expense:'銀行／現金支出',income:'收入',cardpay:'繳信用卡費'};const tx=[...data.transactions].sort((a,b)=>a.date.localeCompare(b.date)).map(t=>({'日期':t.date,'月份':t.date.slice(0,7),'類型':typeName[t.type]||t.type,'帳戶／信用卡':allAccounts.find(a=>a.id===t.accountId)?.name||'','分類':t.category||'','備註':t.note||'','金額':Number(t.amount)}));const banks=data.banks.map(b=>({'銀行':b.name,'初始餘額':Number(b.initial),'目前餘額':bankBalance(b.id)}));const cardUsage=data.cards.map(c=>{const used=monthTx('card').filter(t=>t.accountId===c.id).reduce((s,t)=>s+Number(t.amount),0);return {'月份':selectedMonth,'信用卡':c.name,'信用額度':Number(c.limit),'本月已刷':used,'額度使用率':c.limit?used/Number(c.limit):0}});const wb=XLSX.utils.book_new();const wsTx=XLSX.utils.json_to_sheet(tx);const wsBank=XLSX.utils.json_to_sheet(banks);const wsCard=XLSX.utils.json_to_sheet(cardUsage);wsTx['!cols']=[{wch:12},{wch:10},{wch:16},{wch:20},{wch:12},{wch:28},{wch:14}];wsBank['!cols']=[{wch:20},{wch:16},{wch:16}];wsCard['!cols']=[{wch:10},{wch:20},{wch:16},{wch:16},{wch:14}];XLSX.utils.book_append_sheet(wb,wsTx,'全部收支明細');XLSX.utils.book_append_sheet(wb,wsBank,'銀行餘額');XLSX.utils.book_append_sheet(wb,wsCard,`${selectedMonth}信用卡`);XLSX.writeFile(wb,`收支紀錄-${today()}.xlsx`);toast('Excel 已匯出')}
+importFile.addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const parsed=JSON.parse(await f.text());if(!parsed.banks||!parsed.cards||!parsed.transactions)throw 0;data=migrate(parsed);await save(true);toast('備份已匯入並同步')}catch{alert('備份檔格式不正確')}e.target.value=''})
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1800)}
 function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}function attr(s=''){return esc(s)}
-render();
+bootstrap();
 </script>
 </body>
 </html>
