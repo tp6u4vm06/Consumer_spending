@@ -130,7 +130,13 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
   font-size:20px;
   font-weight:800;
 }
-
+@media (max-width:620px) {
+  input,
+  select,
+  textarea {
+    font-size:16px !important;
+  }
+}
 </style>
 </head>
 <body>
@@ -311,5 +317,20 @@ function toast(msg){const el=document.getElementById('toast');el.textContent=msg
 function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}function attr(s=''){return esc(s)}
 bootstrap();
 </script>
+
+<script>
+document.addEventListener('gesturestart', function (e) {
+  e.preventDefault();
+});
+
+document.addEventListener('gesturechange', function (e) {
+  e.preventDefault();
+});
+
+document.addEventListener('gestureend', function (e) {
+  e.preventDefault();
+});
+</script>
+  
 </body>
 </html>
