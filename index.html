@@ -26,6 +26,21 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
 .auth-gate{position:fixed;inset:0;background:rgba(244,246,248,.98);z-index:100;display:flex;align-items:center;justify-content:center;padding:18px}.auth-gate.hidden{display:none}.auth-box{width:min(430px,100%);background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:24px}.auth-box h2{margin:0 0 8px}.auth-box p{color:var(--muted);font-size:13px;line-height:1.6}.auth-box input{width:100%;padding:11px;border:1px solid var(--line);border-radius:9px;margin:5px 0 10px;font-size:14px}.auth-buttons{display:flex;gap:8px}.auth-buttons button{flex:1}.cloud-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:#fff;font-size:12px;font-weight:700}.dot{width:8px;height:8px;border-radius:50%;background:#9ca3af}.dot.ok{background:#10b981}.dot.sync{background:#f59e0b}.dot.bad{background:#ef4444}.sync-note{font-size:12px;color:var(--muted);margin-top:7px}.config-help{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px;color:#9a3412;font-size:12px;line-height:1.55;margin-top:10px}
 @media(max-width:940px){.kpi{grid-column:span 6}.form-grid{grid-template-columns:repeat(2,1fr)}.quick-submit{grid-column:1/-1}.quick-submit button{width:100%}}
 @media(max-width:620px){.shell{padding:14px}.topbar{align-items:flex-start;flex-direction:column}.kpi{grid-column:span 12}.bank-grid{grid-template-columns:1fr}.bank-item{border-bottom:1px solid #f1f5f9!important}.bank-item:last-child{border-bottom:0!important}.form-grid{grid-template-columns:1fr}.quick-submit{grid-column:auto}.card-grid{grid-template-columns:1fr}.card{padding:15px}.kpi .value{font-size:25px}.table-wrap{overflow:auto}table{min-width:760px}.searchbar input{min-width:0;width:100%}.monthbar{align-items:flex-start;flex-direction:column}}
+
+.page-tabs{display:flex;gap:8px;margin:0 0 14px;position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0}
+.page-tab{flex:1;background:#fff;color:#111827;border:1px solid var(--line);box-shadow:var(--shadow)}
+.page-tab.active{background:#111827;color:#fff}
+.app-page{display:none}.app-page.active{display:block}
+.privacy-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.privacy-btn{padding:7px 10px;font-size:12px}.masked{letter-spacing:2px}
+@media(max-width:620px){
+ input[type="date"],input[type="month"]{min-width:0!important;max-width:100%!important;width:100%!important;font-size:16px!important}
+ .field{min-width:0}.field input,.field select{min-width:0;max-width:100%}
+ .month-controls{width:100%}.month-controls input{flex:1}
+ .topbar .brand p{display:none}.actions{width:100%}
+ .actions .secondary:not(#logoutBtn){font-size:12px;padding:8px 9px}
+}
+
 </style>
 </head>
 <body>
@@ -43,44 +58,51 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
     </div>
   </div>
 
-  <div class="grid">
-    <div class="card span12 monthbar">
-      <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">目前查看月份</div><div class="month-label" id="monthTitle"></div></div>
-      <div class="month-controls"><button class="secondary small" onclick="moveMonth(-1)">← 上月</button><input id="monthPicker" type="month" /><button class="secondary small" onclick="moveMonth(1)">下月 →</button><button class="secondary small" onclick="goCurrentMonth()">回本月</button></div>
+  <div class="page-tabs">
+    <button id="tabRecord" class="page-tab active" onclick="showPage('record')">快速紀錄</button>
+    <button id="tabOverview" class="page-tab" onclick="showPage('overview')">資金總覽</button>
+  </div>
+
+  <div id="recordPage" class="app-page active">
+    <div class="grid">
+      <div class="card span12 monthbar">
+        <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">目前查看月份</div><div class="month-label" id="monthTitle"></div></div>
+        <div class="month-controls"><button class="secondary small" onclick="moveMonth(-1)">← 上月</button><input id="monthPicker" type="month" /><button class="secondary small" onclick="moveMonth(1)">下月 →</button><button class="secondary small" onclick="goCurrentMonth()">回本月</button></div>
+      </div>
+      <div class="card span12">
+        <div class="section-title"><h2>快速登錄</h2><span>手機優先｜快速輸入</span></div>
+        <form id="quickForm" class="form-grid">
+          <div class="field"><label>類型</label><select id="qType"><option value="card">信用卡刷費</option><option value="expense">銀行／現金支出</option><option value="income">收入</option><option value="cardpay">繳信用卡費</option></select></div>
+          <div class="field"><label>日期</label><input id="qDate" type="date" required /></div>
+          <div class="field"><label>帳戶／信用卡</label><select id="qAccount"></select></div>
+          <div class="field"><label>金額</label><input id="qAmount" type="number" min="0" step="1" inputmode="numeric" placeholder="1280" required /></div>
+          <div class="field"><label>分類</label><select id="qCategory"><option>餐飲</option><option>交通</option><option>生活</option><option>購物</option><option>娛樂</option><option>日用品</option><option>醫療</option><option>學校</option><option>保險</option><option>其他</option></select></div>
+          <div class="field"><label>備註</label><input id="qNote" placeholder="例如：停車費" /></div>
+          <div class="quick-submit"><button type="submit">＋ 儲存</button></div>
+        </form>
+      </div>
+      <div class="card span12">
+        <div class="section-title"><h2>信用卡本月使用</h2><span id="cardMonthLabel"></span></div>
+        <div id="cardList" class="card-grid"></div>
+      </div>
+      <div class="card span12">
+        <div class="section-title"><h2>每月紀錄搜尋</h2><span id="txCount"></span></div>
+        <div class="searchbar" style="margin-bottom:10px"><input id="txSearch" type="search" placeholder="搜尋帳戶、分類或備註…" /><button class="secondary small" onclick="clearSearch()">清除搜尋</button></div>
+        <div class="table-wrap"><table><thead><tr><th>日期</th><th>類型</th><th>帳戶</th><th>分類</th><th>備註</th><th class="right">金額</th><th></th></tr></thead><tbody id="txBody"></tbody></table></div>
+      </div>
     </div>
+  </div>
 
-    <div class="card kpi"><div class="label">銀行目前總額</div><div class="value" id="kBank">$0</div><div class="sub">即時餘額，不受月份篩選</div></div>
-    <div class="card kpi"><div class="label">所選月份信用卡刷費</div><div class="value" id="kCard">$0</div><div class="sub" id="kCardSub">0 筆刷卡</div></div>
-    <div class="card kpi"><div class="label">所選月份收入</div><div class="value" id="kIncome">$0</div><div class="sub">依交易日期計算</div></div>
-    <div class="card kpi"><div class="label">所選月份現金支出</div><div class="value" id="kExpense">$0</div><div class="sub">不含信用卡刷費</div></div>
-
-    <div class="card span12">
-      <div class="section-title"><h2>快速登錄</h2><span>一列完成輸入</span></div>
-      <form id="quickForm" class="form-grid">
-        <div class="field"><label>類型</label><select id="qType"><option value="card">信用卡刷費</option><option value="expense">銀行／現金支出</option><option value="income">收入</option><option value="cardpay">繳信用卡費</option></select></div>
-        <div class="field"><label>日期</label><input id="qDate" type="date" required /></div>
-        <div class="field"><label>帳戶／信用卡</label><select id="qAccount"></select></div>
-        <div class="field"><label>金額</label><input id="qAmount" type="number" min="0" step="1" inputmode="numeric" placeholder="1280" required /></div>
-        <div class="field"><label>分類</label><select id="qCategory"><option>餐飲</option><option>交通</option><option>生活</option><option>購物</option><option>娛樂</option><option>日用品</option><option>醫療</option><option>學校</option><option>保險</option><option>其他</option></select></div>
-        <div class="field"><label>備註</label><input id="qNote" placeholder="例如：停車費" /></div>
-        <div class="quick-submit"><button type="submit">＋ 儲存</button></div>
-      </form>
-    </div>
-
-    <div class="card span12">
-      <div class="section-title"><h2>信用卡本月使用</h2><span id="cardMonthLabel"></span></div>
-      <div id="cardList" class="card-grid"></div>
-    </div>
-
-    <div class="card span12">
-      <div class="section-title"><h2>各家銀行餘額</h2><span>七家銀行｜左右兩欄</span></div>
-      <div id="bankList" class="bank-grid"></div>
-    </div>
-
-    <div class="card span12">
-      <div class="section-title"><h2>每月紀錄搜尋</h2><span id="txCount"></span></div>
-      <div class="searchbar" style="margin-bottom:10px"><input id="txSearch" type="search" placeholder="搜尋帳戶、分類或備註…" /><button class="secondary small" onclick="clearSearch()">清除搜尋</button></div>
-      <div class="table-wrap"><table><thead><tr><th>日期</th><th>類型</th><th>帳戶</th><th>分類</th><th>備註</th><th class="right">金額</th><th></th></tr></thead><tbody id="txBody"></tbody></table></div>
+  <div id="overviewPage" class="app-page">
+    <div class="grid">
+      <div class="card kpi"><div class="privacy-row"><div class="label">銀行目前總額</div><button id="privacyBtn" class="secondary privacy-btn" onclick="toggleBankTotal()">顯示</button></div><div class="value masked" id="kBank">••••••</div><div class="sub">預設隱藏，可隨時切換</div></div>
+      <div class="card kpi"><div class="label">所選月份信用卡刷費</div><div class="value" id="kCard">$0</div><div class="sub" id="kCardSub">0 筆刷卡</div></div>
+      <div class="card kpi"><div class="label">所選月份收入</div><div class="value" id="kIncome">$0</div><div class="sub">依交易日期計算</div></div>
+      <div class="card kpi"><div class="label">所選月份現金支出</div><div class="value" id="kExpense">$0</div><div class="sub">不含信用卡刷費</div></div>
+      <div class="card span12">
+        <div class="section-title"><h2>各家銀行餘額</h2><span>七家銀行｜左右兩欄</span></div>
+        <div id="bankList" class="bank-grid"></div>
+      </div>
     </div>
   </div>
   <div class="footer-note">主要資料儲存在 Supabase 雲端，同一帳號在手機、電腦與不同瀏覽器會讀取同一份紀錄；瀏覽器 LocalStorage 僅作為暫存與離線備援。建議仍定期匯出 Excel。</div>
@@ -148,10 +170,24 @@ const money=n=>new Intl.NumberFormat('zh-TW',{style:'currency',currency:'TWD',ma
 function bankBalance(id){let b=data.banks.find(x=>x.id===id);let v=Number(b?.initial||0);for(const t of data.transactions){if(t.accountId!==id)continue;if(t.type==='income')v+=Number(t.amount);if(t.type==='expense'||t.type==='cardpay')v-=Number(t.amount)}return v}
 function monthTx(type,month=selectedMonth){return data.transactions.filter(t=>t.type===type&&t.date?.slice(0,7)===month)}
 function monthText(m){const [y,mo]=m.split('-');return `${y} 年 ${Number(mo)} 月`}
+
+let bankTotalVisible=localStorage.getItem('finance-bank-total-visible')==='1';
+function showPage(page){
+ const record=page==='record';
+ recordPage.classList.toggle('active',record);overviewPage.classList.toggle('active',!record);
+ tabRecord.classList.toggle('active',record);tabOverview.classList.toggle('active',!record);
+ window.scrollTo({top:0,behavior:'smooth'});
+}
+function toggleBankTotal(){
+ bankTotalVisible=!bankTotalVisible;
+ localStorage.setItem('finance-bank-total-visible',bankTotalVisible?'1':'0');
+ render();
+}
+
 function render(){
   monthPicker.value=selectedMonth;monthTitle.textContent=monthText(selectedMonth);cardMonthLabel.textContent=monthText(selectedMonth);
   const bankTotal=data.banks.reduce((s,b)=>s+bankBalance(b.id),0),cardMonth=monthTx('card'),cardTotal=cardMonth.reduce((s,t)=>s+Number(t.amount),0),income=monthTx('income').reduce((s,t)=>s+Number(t.amount),0),expense=monthTx('expense').reduce((s,t)=>s+Number(t.amount),0);
-  kBank.textContent=money(bankTotal);kCard.textContent=money(cardTotal);kCardSub.textContent=`${cardMonth.length} 筆刷卡`;kIncome.textContent=money(income);kExpense.textContent=money(expense);
+  kBank.textContent=bankTotalVisible?money(bankTotal):'••••••';kBank.classList.toggle('masked',!bankTotalVisible);privacyBtn.textContent=bankTotalVisible?'隱藏':'顯示';kCard.textContent=money(cardTotal);kCardSub.textContent=`${cardMonth.length} 筆刷卡`;kIncome.textContent=money(income);kExpense.textContent=money(expense);
   bankList.innerHTML=data.banks.map(b=>`<div class="bank-item"><div><div class="name">${esc(b.name)}</div><div class="meta">初始 ${money(b.initial)}</div></div><div class="money ${bankBalance(b.id)<0?'neg':'pos'}">${money(bankBalance(b.id))}</div></div>`).join('')||'<div class="empty">尚未設定銀行</div>';
   cardList.innerHTML=data.cards.map(c=>{const used=cardMonth.filter(t=>t.accountId===c.id).reduce((s,t)=>s+Number(t.amount),0),pct=c.limit?Math.min(100,used/c.limit*100):0;return `<div class="cc-box"><div class="cc-top"><div><div class="name">${esc(c.name)}</div><div class="meta">額度 ${money(c.limit)}</div></div><div class="meta">${pct.toFixed(0)}%</div></div><div class="money">${money(used)}</div><div class="bar"><i style="width:${pct}%"></i></div></div>`}).join('')||'<div class="empty">尚未設定信用卡</div>';
   renderTransactions();refreshAccounts();renderBankSettings();renderCardSettings();
