@@ -7,7 +7,12 @@
 <title>我的收支紀錄</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script>
+<script>
+window.FINANCE_CONFIG = {
+  SUPABASE_URL: "https://ydiluqlwdvijlnjvomzu.supabase.co",
+  SUPABASE_PUBLISHABLE_KEY: "sb_publishable_SI0YMgwU5N2T4ryCFSCKAg_Rd6z8_RX"
+};
+</script>
 <style>
 :root{--bg:#f4f6f8;--panel:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--accent:#2563eb;--good:#047857;--warn:#b45309;--bad:#b91c1c;--shadow:0 10px 30px rgba(17,24,39,.06)}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",Arial,sans-serif;color:var(--text)}
@@ -112,7 +117,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
   <div class="auth-box">
     <h2>我的收支紀錄</h2>
     <p>登入後即可跨手機、電腦同步同一份銀行與信用卡紀錄。</p>
-    <div id="configWarning" class="config-help" style="display:none">尚未設定 Supabase。請先依 README 修改 <b>config.js</b> 的 Project URL 與 Publishable Key，再重新部署 GitHub Pages。</div>
+    <div id="configWarning" class="config-help" style="display:none">Supabase 連線設定未載入。請確認已部署此最新版 index.html。</div>
     <div id="authForm">
       <input id="authEmail" type="email" autocomplete="email" placeholder="Email" />
       <input id="authPassword" type="password" autocomplete="current-password" placeholder="密碼（至少 6 碼）" />
