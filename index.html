@@ -113,6 +113,21 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
   }
 }
 
+
+/* 銀行餘額顏色分級 */
+.balance-high{
+  color:#16a34a !important;
+  font-weight:800;
+}
+.balance-mid{
+  color:#f59e0b !important;
+  font-weight:800;
+}
+.balance-low{
+  color:#dc2626 !important;
+  font-weight:800;
+}
+
 </style>
 </head>
 <body>
@@ -260,7 +275,17 @@ function render(){
   monthPicker.value=selectedMonth;monthTitle.textContent=monthText(selectedMonth);cardMonthLabel.textContent=monthText(selectedMonth);
   const bankTotal=data.banks.reduce((s,b)=>s+bankBalance(b.id),0),cardMonth=monthTx('card'),cardTotal=cardMonth.reduce((s,t)=>s+Number(t.amount),0),income=monthTx('income').reduce((s,t)=>s+Number(t.amount),0),expense=monthTx('expense').reduce((s,t)=>s+Number(t.amount),0);
   kBank.textContent=bankTotalVisible?money(bankTotal):'••••••';kBank.classList.toggle('masked',!bankTotalVisible);privacyBtn.textContent=bankTotalVisible?'隱藏':'顯示';kCard.textContent=money(cardTotal);kCardSub.textContent=`${cardMonth.length} 筆刷卡`;kIncome.textContent=money(income);kExpense.textContent=money(expense);
-  bankList.innerHTML=data.banks.map(b=>`<div class="bank-item"><div><div class="name">${esc(b.name)}</div><div class="meta">初始 ${money(b.initial)}</div></div><div class="money ${bankBalance(b.id)<0?'neg':'pos'}">${money(bankBalance(b.id))}</div></div>`).join('')||'<div class="empty">尚未設定銀行</div>';
+  bankList.innerHTML=data.banks.map(b=>{
+    const balance=bankBalance(b.id);
+    const balanceClass=balance>=100000?'balance-high':balance<=20000?'balance-low':'balance-mid';
+    return `<div class="bank-item">
+      <div>
+        <div class="name">${esc(b.name)}</div>
+        <div class="meta">初始 ${money(b.initial)}</div>
+      </div>
+      <div class="money ${balanceClass}">${money(balance)}</div>
+    </div>`;
+  }).join('')||'<div class="empty">尚未設定銀行</div>';
   cardList.innerHTML=data.cards.map(c=>{const used=cardMonth.filter(t=>t.accountId===c.id).reduce((s,t)=>s+Number(t.amount),0),pct=c.limit?Math.min(100,used/c.limit*100):0;return `<div class="cc-box"><div class="cc-top"><div><div class="name">${esc(c.name)}</div><div class="meta">額度 ${money(c.limit)}</div></div><div class="meta">${pct.toFixed(0)}%</div></div><div class="money">${money(used)}</div><div class="bar"><i style="width:${pct}%"></i></div></div>`}).join('')||'<div class="empty">尚未設定信用卡</div>';
   renderTransactions();refreshAccounts();renderBankSettings();renderCardSettings();
 }
