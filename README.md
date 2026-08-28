@@ -78,3 +78,8 @@ GitHub → Settings → Pages → Deploy from a branch → `main` → `/ (root)`
 - 資金總覽頁：銀行總額、信用卡刷費、收入、支出、七家銀行餘額。
 - 銀行總額預設隱藏，可按顯示／隱藏切換。
 - 修正 iPhone 日期欄位超出卡片寬度。
+
+## 修正版
+- 已恢復此專案的 Supabase Project URL 與 Publishable Key。
+- 修正銀行刪除後重新整理會自動補回的問題。
+- 銀行名稱修改也不再被系統強制改回預設名稱。
