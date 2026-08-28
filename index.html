@@ -46,6 +46,73 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
  .actions .secondary:not(#logoutBtn){font-size:12px;padding:8px 9px}
 }
 
+
+/* iPhone / Safari 日期欄位修正版 */
+*, *::before, *::after { box-sizing: border-box; }
+
+.form-grid,
+.field,
+.field input,
+.field select {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 620px) {
+  .form-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100% !important;
+  }
+
+  .field {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden;
+  }
+
+  .field input,
+  .field select,
+  input[type="date"],
+  input[type="month"] {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  input[type="date"] {
+    -webkit-appearance: none;
+    appearance: none;
+    overflow: hidden;
+    font-size: 16px !important;
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  input[type="date"]::-webkit-date-and-time-value {
+    text-align: left;
+    min-width: 0;
+  }
+
+  input[type="date"]::-webkit-datetime-edit {
+    min-width: 0;
+    padding: 0;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    margin-left: auto;
+  }
+
+  .quick-submit,
+  .quick-submit button {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -80,10 +147,10 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
           <div class="field"><label>類型</label><select id="qType"><option value="card">信用卡刷費</option><option value="expense">銀行／現金支出</option><option value="income">收入</option><option value="cardpay">繳信用卡費</option></select></div>
           <div class="field"><label>日期</label><input id="qDate" type="date" required /></div>
           <div class="field"><label>帳戶／信用卡</label><select id="qAccount"></select></div>
-          <div class="field"><label>金額</label><input id="qAmount" type="number" min="0" step="1" inputmode="numeric" placeholder="1280" required /></div>
+          <div class="field"><label>金額</label><input id="qAmount" type="number" min="0" step="1" inputmode="numeric" placeholder="少花點" required /></div>
           <div class="field"><label>分類</label><select id="qCategory"><option>餐飲</option><option>交通</option><option>生活</option><option>購物</option><option>娛樂</option><option>日用品</option><option>醫療</option><option>學校</option><option>保險</option><option>其他</option></select></div>
-          <div class="field"><label>備註</label><input id="qNote" placeholder="例如：停車費" /></div>
-          <div class="quick-submit"><button type="submit">＋ 儲存</button></div>
+          <div class="field"><label>備註</label><input id="qNote" placeholder="例如：別再花錢了~" /></div>
+          <div class="quick-submit"><button type="submit">儲存</button></div>
         </form>
       </div>
       <div class="card span12">
