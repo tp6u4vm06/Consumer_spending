@@ -191,9 +191,37 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
           <div class="field"><label>帳戶／信用卡</label><select id="qAccount"></select></div>
           <div class="field"><label>金額</label><input id="qAmount" type="number" min="0" step="1" inputmode="numeric" placeholder="少花點" required /></div>
           <div class="field"><label>分類</label><select id="qCategory"><option>餐飲</option><option>交通</option><option>生活</option><option>購物</option><option>娛樂</option><option>日用品</option><option>醫療</option><option>學校</option><option>保險</option><option>其他</option></select></div>
-          <div class="field"><label>備註</label><input id="qNote" placeholder="例如：別再花錢了~" /></div>
-          <label id="nextMonthWrap" style="display:none;">
-          <input type="checkbox" id="nextMonthCard">計入下個月信用卡使用</label>
+          <div class="field">
+
+  <label>備註</label>
+
+  <input
+    id="qNote"
+    placeholder="例如：別再花錢了~"
+  />
+
+  <label
+    id="nextMonthWrap"
+    style="
+      display:none;
+      margin-top:8px;
+      cursor:pointer;
+      color:#2563eb;
+      font-weight:700;
+    "
+  >
+
+    <input
+      type="checkbox"
+      id="nextMonthCard"
+      style="width:auto;margin-right:5px;"
+    >
+
+    此筆列入下月卡費
+
+  </label>
+
+</div>
           <div class="quick-submit"><button type="submit">儲存</button></div>
         </form>
       </div>
@@ -281,7 +309,46 @@ async function signInUser(){if(!configured)return;const email=authEmail.value.tr
 async function signUpUser(){if(!configured)return;const email=authEmail.value.trim(),password=authPassword.value;if(!email||password.length<6){authMessage.textContent='請輸入 Email，密碼至少 6 碼';return}authMessage.textContent='建立帳號中…';const {data:res,error}=await sb.auth.signUp({email,password});if(error){authMessage.textContent='建立失敗：'+error.message;return}authMessage.textContent=res.session?'帳號建立完成，正在登入…':'帳號已建立。若 Supabase 啟用 Email 驗證，請先到信箱完成驗證再登入。'}
 async function signOutUser(){if(!sb)return;await sb.auth.signOut();currentUser=null;logoutBtn.style.display='none';authGate.classList.remove('hidden');setCloudState('','未登入')}
 async function applySession(session){currentUser=session?.user||null;if(currentUser){authGate.classList.add('hidden');logoutBtn.style.display='inline-block';await loadCloud()}else{authGate.classList.remove('hidden');logoutBtn.style.display='none';setCloudState('','未登入')}}
-async function bootstrap(){qDate.value=today();render();if(!configured){configWarning.style.display='block';authForm.style.opacity='.45';authForm.style.pointerEvents='none';setCloudState('bad','待設定 Supabase');return}const {data:{session}}=await sb.auth.getSession();await applySession(session);sb.auth.onAuthStateChange((_event,session)=>{setTimeout(()=>applySession(session),0)});window.addEventListener('online',()=>{if(currentUser&&localStorage.getItem(PENDING_KEY)==='1')save(false)})}
+async function bootstrap(){
+
+  qDate.value=today();
+
+  render();
+
+  // 初始化快速登錄的帳戶選單
+  refreshAccounts();
+
+  if(!configured){
+    configWarning.style.display='block';
+    authForm.style.opacity='.45';
+    authForm.style.pointerEvents='none';
+    setCloudState('bad','待設定 Supabase');
+    return;
+  }
+
+  const {data:{session}}=await sb.auth.getSession();
+
+  await applySession(session);
+
+  // 雲端資料讀取完成後，再更新一次帳戶選單
+  refreshAccounts();
+
+  sb.auth.onAuthStateChange((_event,session)=>{
+    setTimeout(async ()=>{
+      await applySession(session);
+      refreshAccounts();
+    },0);
+  });
+
+  window.addEventListener('online',()=>{
+    if(
+      currentUser &&
+      localStorage.getItem(PENDING_KEY)==='1'
+    ){
+      save(false);
+    }
+  });
+}
 const money=n=>new Intl.NumberFormat('zh-TW',{style:'currency',currency:'TWD',maximumFractionDigits:0}).format(Number(n||0));
 function bankBalance(id){let b=data.banks.find(x=>x.id===id);let v=Number(b?.initial||0);for(const t of data.transactions){if(t.accountId!==id)continue;if(t.type==='income')v+=Number(t.amount);if(t.type==='expense'||t.type==='cardpay')v-=Number(t.amount)}return v}
 function monthTx(type,month=selectedMonth){return data.transactions.filter(t=>t.type===type&&t.date?.slice(0,7)===month)}
@@ -558,7 +625,6 @@ function exportExcel(){if(typeof XLSX==='undefined'){alert('Excel 匯出元件�
 importFile.addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const parsed=JSON.parse(await f.text());if(!parsed.banks||!parsed.cards||!parsed.transactions)throw 0;data=migrate(parsed);await save(true);toast('備份已匯入並同步')}catch{alert('備份檔格式不正確')}e.target.value=''})
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1800)}
 function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}function attr(s=''){return esc(s)}
-refreshAccounts();
 bootstrap();
 </script>
 
