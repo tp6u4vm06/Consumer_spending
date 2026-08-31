@@ -21,7 +21,7 @@ button,.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor
 .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px}.kpi{grid-column:span 3}.kpi .label{font-size:13px;color:var(--muted)}.kpi .value{font-size:28px;font-weight:800;margin-top:7px;letter-spacing:-.5px}.kpi .sub{font-size:12px;color:var(--muted);margin-top:5px}
 .span12{grid-column:span 12}.section-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}.section-title h2{font-size:17px;margin:0}.section-title span{font-size:12px;color:var(--muted)}
 .monthbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}.month-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.month-controls input{padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:14px;background:#fff}.month-label{font-weight:800;font-size:18px}
-.form-grid{display:grid;grid-template-columns:1.15fr 1fr 1.4fr 1fr 1fr 1.6fr auto;gap:9px;align-items:end}.field label{display:block;font-size:12px;color:var(--muted);margin:0 0 5px}.field input,.field select{width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:14px;outline:none}.field input:focus,.field select:focus{border-color:#93c5fd;box-shadow:0 0 0 3px #dbeafe}.quick-submit button{height:39px;white-space:nowrap}
+.form-grid{display:grid;.form-grid{display:grid;grid-template-columns:1.15fr 1fr 1.4fr 1fr 1fr 1.6fr;gap:9px;align-items:end;}.field label{display:block;font-size:12px;color:var(--muted);margin:0 0 5px}.field input,.field select{width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:14px;outline:none}.field input:focus,.field select:focus{border-color:#93c5fd;box-shadow:0 0 0 3px #dbeafe}.quick-submit button{height:39px;white-space:nowrap}
 .bank-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 28px}.bank-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #f1f5f9}.bank-item:nth-last-child(-n+2){border-bottom:0}.name{font-weight:700}.meta{font-size:12px;color:var(--muted);margin-top:3px}.money{font-weight:800;text-align:right}.money.neg{color:var(--bad)}.money.pos{color:var(--good)}
 .card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}.cc-box{border:1px solid var(--line);border-radius:13px;padding:13px;background:#fbfcfe}.cc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.cc-box .money{font-size:20px;margin-top:5px}.bar{height:7px;border-radius:999px;background:#eef2f7;overflow:hidden;margin-top:9px}.bar i{display:block;height:100%;background:#111827;border-radius:999px}
 .pill{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#eef2ff;color:#3730a3}.pill.expense{background:#fef2f2;color:#991b1b}.pill.income{background:#ecfdf5;color:#065f46}.pill.cardpay{background:#fff7ed;color:#9a3412}
@@ -155,6 +155,69 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
     font-size:12px;
   }
 }
+/* 快速登錄下方操作列 */
+.quick-actions-row{
+  grid-column:1 / -1;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:16px;
+  margin-top:4px;
+}
+
+.next-month-option{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  color:#2563eb;
+  font-weight:700;
+  font-size:13px;
+  cursor:pointer;
+}
+
+.next-month-option input{
+  width:auto !important;
+  margin:0;
+}
+
+.quick-actions-row .quick-submit{
+  margin-left:auto;
+}
+
+.quick-actions-row .quick-submit button{
+  min-width:80px;
+}
+@media(max-width:620px){
+
+  .quick-actions-row{
+    grid-column:1 / -1;
+    width:100%;
+    display:flex;
+    flex-direction:row;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-top:2px;
+  }
+
+  .next-month-option{
+    flex:1;
+    font-size:13px;
+    white-space:nowrap;
+  }
+
+  .quick-actions-row .quick-submit{
+    width:auto !important;
+    margin-left:auto;
+  }
+
+  .quick-actions-row .quick-submit button{
+    width:auto !important;
+    min-width:82px;
+    padding:10px 16px;
+  }
+}
+           
 </style>
 </head>
 <body>
@@ -186,43 +249,78 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
       <div class="card span12">
         <div class="section-title"><h2>快速登錄</h2></div>
         <form id="quickForm" class="form-grid">
-          <div class="field"><label>類型</label><select id="qType"><option value="card">信用卡刷費</option><option value="expense">銀行／現金支出</option><option value="income">收入</option><option value="cardpay">繳信用卡費</option></select></div>
-          <div class="field"><label>日期</label><input id="qDate" type="date" required /></div>
-          <div class="field"><label>帳戶／信用卡</label><select id="qAccount"></select></div>
-          <div class="field"><label>金額</label><input id="qAmount" type="number" min="0" step="1" inputmode="numeric" placeholder="少花點" required /></div>
-          <div class="field"><label>分類</label><select id="qCategory"><option>餐飲</option><option>交通</option><option>生活</option><option>購物</option><option>娛樂</option><option>日用品</option><option>醫療</option><option>學校</option><option>保險</option><option>其他</option></select></div>
+        
           <div class="field">
-
-  <label>備註</label>
-
-  <input
-    id="qNote"
-    placeholder="例如：別再花錢了~"
-  />
-
-  <label
-    id="nextMonthWrap"
-    style="
-      display:none;
-      margin-top:8px;
-      cursor:pointer;
-      color:#2563eb;
-      font-weight:700;
-    "
-  >
-
-    <input
-      type="checkbox"
-      id="nextMonthCard"
-      style="width:auto;margin-right:5px;"
-    >
-
-    此筆列入下月卡費
-
-  </label>
-
-</div>
-          <div class="quick-submit"><button type="submit">儲存</button></div>
+            <label>類型</label>
+            <select id="qType">
+              <option value="card">信用卡刷費</option>
+              <option value="expense">銀行／現金支出</option>
+              <option value="income">收入</option>
+              <option value="cardpay">繳信用卡費</option>
+            </select>
+          </div>
+        
+          <div class="field">
+            <label>日期</label>
+            <input id="qDate" type="date" required />
+          </div>
+        
+          <div class="field">
+            <label>帳戶／信用卡</label>
+            <select id="qAccount"></select>
+          </div>
+        
+          <div class="field">
+            <label>金額</label>
+            <input
+              id="qAmount"
+              type="number"
+              min="0"
+              step="1"
+              inputmode="numeric"
+              placeholder="少花點"
+              required
+            />
+          </div>
+        
+          <div class="field">
+            <label>分類</label>
+            <select id="qCategory">
+              <option>餐飲</option>
+              <option>交通</option>
+              <option>生活</option>
+              <option>購物</option>
+              <option>娛樂</option>
+              <option>日用品</option>
+              <option>醫療</option>
+              <option>學校</option>
+              <option>保險</option>
+              <option>其他</option>
+            </select>
+          </div>
+        
+          <div class="field">
+            <label>備註</label>
+            <input
+              id="qNote"
+              placeholder="例如：別再花錢了~"
+            />
+          </div>
+        
+          <!-- 下方操作列 -->
+          <div class="quick-actions-row">
+        
+            <label id="nextMonthWrap" class="next-month-option" style="display:none;">
+              <input type="checkbox" id="nextMonthCard">
+              <span>列入下月</span>
+            </label>
+        
+            <div class="quick-submit">
+              <button type="submit">儲存</button>
+            </div>
+        
+          </div>
+        
         </form>
       </div>
       <div class="card span12">
