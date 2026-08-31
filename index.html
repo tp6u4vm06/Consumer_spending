@@ -315,8 +315,159 @@ function render(){
       <div class="money ${balanceClass}">${money(balance)}</div>
     </div>`;
   }).join('')||'<div class="empty">尚未設定銀行</div>';
-  cardList.innerHTML=data.cards.map(c=>{const used=cardMonth.filter(t=>t.accountId===c.id).reduce((s,t)=>s+Number(t.amount),0),pct=c.limit?Math.min(100,used/c.limit*100):0;return `<div class="cc-box"><div class="cc-top"><div><div class="name">${esc(c.name)}</div><div class="meta">額度 ${money(c.limit)}</div></div><div class="meta">${pct.toFixed(0)}%</div></div><div class="money">${money(used)}</div><div class="bar"><i style="width:${pct}%"></i></div></div>`}).join('')||'<div class="empty">尚未設定信用卡</div>';
-  renderTransactions();refreshAccounts();renderBankSettings();renderCardSettings();
+  cardList.innerHTML=data.cards.map(c=>{
+
+  const cardTx=cardMonth.filter(t=>t.accountId===c.id);
+
+  const used=cardTx.reduce(
+    (s,t)=>s+Number(t.amount),0
+  );
+
+  const pct=c.limit
+    ?Math.min(100,used/c.limit*100)
+    :0;
+
+  return `
+    <div class="cc-box"
+         style="cursor:pointer"
+         onclick="toggleCardDetail('${c.id}')">
+
+      <div class="cc-top">
+
+        <div>
+          <div class="name">
+            ${esc(c.name)}
+          </div>
+
+          <div class="meta">
+            額度 ${money(c.limit)}｜點擊查看明細
+          </div>
+        </div>
+
+        <div class="meta">
+          ${pct.toFixed(0)}%
+        </div>
+
+      </div>
+
+      <div class="money">
+        ${money(used)}
+      </div>
+
+      <div class="bar">
+        <i style="width:${pct}%"></i>
+      </div>
+
+      <div id="cardDetail-${c.id}"
+           style="display:none;margin-top:14px">
+      </div>
+
+    </div>
+  `;
+
+}).join('')||'<div class="empty">尚未設定信用卡</div>';
+}
+function toggleCardDetail(cardId){
+
+  const box=document.getElementById(
+    `cardDetail-${cardId}`
+  );
+
+  if(!box)return;
+
+  // 已經打開 → 收起來
+  if(box.style.display==='block'){
+    box.style.display='none';
+    return;
+  }
+
+  // 找這個月、這張卡的刷卡紀錄
+  const rows=data.transactions
+    .filter(t=>
+      t.type==='card' &&
+      t.accountId===cardId &&
+      cardUseMonth(t)===selectedMonth
+    )
+    .sort((a,b)=>b.date.localeCompare(a.date));
+
+  if(!rows.length){
+
+    box.innerHTML=`
+      <div class="empty">
+        本月沒有刷卡紀錄
+      </div>
+    `;
+
+    box.style.display='block';
+    return;
+  }
+
+  const total=rows.reduce(
+    (sum,t)=>sum+Number(t.amount),0
+  );
+
+  box.innerHTML=`
+
+    <div style="
+      border-top:1px solid var(--line);
+      padding-top:12px;
+    ">
+
+      ${rows.map(t=>`
+
+        <div style="
+          display:grid;
+          grid-template-columns:65px 1fr auto;
+          gap:8px;
+          padding:8px 0;
+          border-bottom:1px solid var(--line);
+          align-items:center;
+        ">
+
+          <div class="meta">
+            ${t.date.slice(5).replace('-','/')}
+          </div>
+
+          <div>
+
+            <div>
+              ${esc(t.note || t.category || '刷卡')}
+            </div>
+
+            <div class="meta">
+              ${esc(t.category || '')}
+              ${t.nextMonth ? '｜跨月' : ''}
+            </div>
+
+          </div>
+
+          <div class="money" style="font-size:15px">
+            ${money(t.amount)}
+          </div>
+
+        </div>
+
+      `).join('')}
+
+      <div style="
+        display:flex;
+        justify-content:space-between;
+        padding-top:12px;
+        font-weight:800;
+      ">
+
+        <span>本月合計</span>
+
+        <span>
+          ${money(total)}
+        </span>
+
+      </div>
+
+    </div>
+  `;
+
+  box.style.display='block';
 }
 function renderTransactions(){const q=(txSearch.value||'').trim().toLowerCase();const allAccounts=[...data.banks,...data.cards];let rows=data.transactions.filter(t=>t.date?.slice(0,7)===selectedMonth).filter(t=>{if(!q)return true;const acct=allAccounts.find(a=>a.id===t.accountId)?.name||'';return [acct,t.category,t.note,t.date].some(v=>String(v||'').toLowerCase().includes(q))}).sort((a,b)=>(b.date+(b.createdAt||'')).localeCompare(a.date+(a.createdAt||'')));txCount.textContent=`${monthText(selectedMonth)}共 ${rows.length} 筆`;txBody.innerHTML=rows.map(t=>{let typeMap={card:['刷卡','expense'],expense:['支出','expense'],income:['收入','income'],cardpay:['繳卡費','cardpay']};let acct=allAccounts.find(a=>a.id===t.accountId)?.name||'—';let sign=t.type==='income'?'+':'-';return `<tr><td>${t.date}</td><td><span class="pill ${typeMap[t.type]?.[1]||''}">${typeMap[t.type]?.[0]||t.type}</span></td><td>${esc(acct)}</td><td>${esc(t.category||'')}</td><td>${esc(t.note||'')}</td><td class="right money ${t.type==='income'?'pos':'neg'}">${sign}${money(t.amount)}</td><td class="right"><button class="danger small" onclick="delTx('${t.id}')">刪除</button></td></tr>`}).join('')||'<tr><td colspan="7" class="empty">這個月份沒有符合條件的紀錄。</td></tr>'}
 function cardUseMonth(t){
