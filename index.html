@@ -558,6 +558,7 @@ function exportExcel(){if(typeof XLSX==='undefined'){alert('Excel 匯出元件�
 importFile.addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const parsed=JSON.parse(await f.text());if(!parsed.banks||!parsed.cards||!parsed.transactions)throw 0;data=migrate(parsed);await save(true);toast('備份已匯入並同步')}catch{alert('備份檔格式不正確')}e.target.value=''})
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1800)}
 function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}function attr(s=''){return esc(s)}
+refreshAccounts();
 bootstrap();
 </script>
 
