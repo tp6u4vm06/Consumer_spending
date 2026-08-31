@@ -192,6 +192,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
           <div class="field"><label>金額</label><input id="qAmount" type="number" min="0" step="1" inputmode="numeric" placeholder="少花點" required /></div>
           <div class="field"><label>分類</label><select id="qCategory"><option>餐飲</option><option>交通</option><option>生活</option><option>購物</option><option>娛樂</option><option>日用品</option><option>醫療</option><option>學校</option><option>保險</option><option>其他</option></select></div>
           <div class="field"><label>備註</label><input id="qNote" placeholder="例如：別再花錢了~" /></div>
+          <label id="nextMonthWrap" style="display:none;">
+          <input type="checkbox" id="nextMonthCard">計入下個月信用卡使用</label>
           <div class="quick-submit"><button type="submit">儲存</button></div>
         </form>
       </div>
@@ -300,7 +302,7 @@ function toggleBankTotal(){
 
 function render(){
   monthPicker.value=selectedMonth;monthTitle.textContent=monthText(selectedMonth);cardMonthLabel.textContent=monthText(selectedMonth);
-  const bankTotal=data.banks.reduce((s,b)=>s+bankBalance(b.id),0),cardMonth=monthTx('card'),cardTotal=cardMonth.reduce((s,t)=>s+Number(t.amount),0),income=monthTx('income').reduce((s,t)=>s+Number(t.amount),0),expense=monthTx('expense').reduce((s,t)=>s+Number(t.amount),0);
+  const bankTotal=data.banks.reduce((s,b)=>s+bankBalance(b.id),0),cardMonth=data.transactions.filter(t=>t.type==='card'&&cardUseMonth(t)===selectedMonth),cardTotal=cardMonth.reduce((s,t)=>s+Number(t.amount),0),income=monthTx('income').reduce((s,t)=>s+Number(t.amount),0),expense=monthTx('expense').reduce((s,t)=>s+Number(t.amount),0);
   kBank.textContent=bankTotalVisible?money(bankTotal):'••••••';kBank.classList.toggle('masked',!bankTotalVisible);privacyBtn.textContent=bankTotalVisible?'隱藏':'顯示';kCard.textContent=money(cardTotal);kCardSub.textContent=`${cardMonth.length} 筆刷卡`;kIncome.textContent=money(income);kExpense.textContent=money(expense);
   bankList.innerHTML=data.banks.map(b=>{
     const balance=bankBalance(b.id);
@@ -317,11 +319,83 @@ function render(){
   renderTransactions();refreshAccounts();renderBankSettings();renderCardSettings();
 }
 function renderTransactions(){const q=(txSearch.value||'').trim().toLowerCase();const allAccounts=[...data.banks,...data.cards];let rows=data.transactions.filter(t=>t.date?.slice(0,7)===selectedMonth).filter(t=>{if(!q)return true;const acct=allAccounts.find(a=>a.id===t.accountId)?.name||'';return [acct,t.category,t.note,t.date].some(v=>String(v||'').toLowerCase().includes(q))}).sort((a,b)=>(b.date+(b.createdAt||'')).localeCompare(a.date+(a.createdAt||'')));txCount.textContent=`${monthText(selectedMonth)}共 ${rows.length} 筆`;txBody.innerHTML=rows.map(t=>{let typeMap={card:['刷卡','expense'],expense:['支出','expense'],income:['收入','income'],cardpay:['繳卡費','cardpay']};let acct=allAccounts.find(a=>a.id===t.accountId)?.name||'—';let sign=t.type==='income'?'+':'-';return `<tr><td>${t.date}</td><td><span class="pill ${typeMap[t.type]?.[1]||''}">${typeMap[t.type]?.[0]||t.type}</span></td><td>${esc(acct)}</td><td>${esc(t.category||'')}</td><td>${esc(t.note||'')}</td><td class="right money ${t.type==='income'?'pos':'neg'}">${sign}${money(t.amount)}</td><td class="right"><button class="danger small" onclick="delTx('${t.id}')">刪除</button></td></tr>`}).join('')||'<tr><td colspan="7" class="empty">這個月份沒有符合條件的紀錄。</td></tr>'}
-function refreshAccounts(){const type=qType.value;let arr=(type==='card')?data.cards:data.banks;qAccount.innerHTML=arr.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}
+function cardUseMonth(t){
+
+  // 原本刷卡月份
+  let month = t.date.slice(0,7);
+
+  // 沒有勾選「計入下個月」
+  if(!t.nextMonth){
+    return month;
+  }
+
+  // 有勾選 → 月份 + 1
+  let [year, mon] = month.split('-').map(Number);
+
+  mon++;
+
+  // 12月 → 下一年1月
+  if(mon > 12){
+    mon = 1;
+    year++;
+  }
+
+  return `${year}-${String(mon).padStart(2,'0')}`;
+} 
+function refreshAccounts(){
+  const type = qType.value;
+
+  let arr = (type === 'card') ? data.cards : data.banks;
+
+  qAccount.innerHTML = arr.map(x =>
+    `<option value="${x.id}">${esc(x.name)}</option>`
+  ).join('');
+
+  // 只有選擇「刷卡」時才顯示
+  nextMonthWrap.style.display =
+    type === 'card' ? 'block' : 'none';
+
+  // 如果不是刷卡，自動取消勾選
+  if(type !== 'card'){
+    nextMonthCard.checked = false;
+  }
+}
 qType.addEventListener('change',refreshAccounts);monthPicker.addEventListener('change',()=>{if(monthPicker.value){selectedMonth=monthPicker.value;render()}});txSearch.addEventListener('input',renderTransactions);
 function moveMonth(delta){let [y,m]=selectedMonth.split('-').map(Number);m+=delta;if(m<1){m=12;y--}if(m>12){m=1;y++}selectedMonth=`${y}-${String(m).padStart(2,'0')}`;render()}
 function goCurrentMonth(){selectedMonth=currentMonth();render()}function clearSearch(){txSearch.value='';renderTransactions()}
-quickForm.addEventListener('submit',async e=>{e.preventDefault();const amount=Number(qAmount.value);if(!amount||amount<=0)return toast('請輸入正確金額');data.transactions.push({id:crypto.randomUUID?crypto.randomUUID():Date.now().toString(),type:qType.value,date:qDate.value,accountId:qAccount.value,amount,category:qCategory.value,note:qNote.value.trim(),createdAt:new Date().toISOString()});selectedMonth=qDate.value.slice(0,7);qAmount.value='';qNote.value='';await save(true)});
+quickForm.addEventListener('submit',async e=>{
+  e.preventDefault();
+
+  const amount=Number(qAmount.value);
+
+  if(!amount||amount<=0)
+    return toast('請輸入正確金額');
+
+  data.transactions.push({
+    id:crypto.randomUUID?crypto.randomUUID():Date.now().toString(),
+    type:qType.value,
+    date:qDate.value,
+    accountId:qAccount.value,
+    amount,
+    category:qCategory.value,
+    note:qNote.value.trim(),
+
+    // 刷卡時，記錄是否要算到下個月
+    nextMonth:qType.value==='card' ? nextMonthCard.checked : false,
+
+    createdAt:new Date().toISOString()
+  });
+
+  selectedMonth=qDate.value.slice(0,7);
+
+  qAmount.value='';
+  qNote.value='';
+
+  // 儲存後取消勾選
+  nextMonthCard.checked=false;
+
+  await save(true);
+});
 async function delTx(id){if(confirm('確定刪除這筆紀錄？')){data.transactions=data.transactions.filter(t=>t.id!==id);await save(true)}}
 function renderBankSettings(){bankSettings.innerHTML=data.banks.map((b,i)=>`<div class="form-grid" style="grid-template-columns:1fr 1fr;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #eee"><div class="field"><label>銀行名稱</label><input value="${attr(b.name)}" onchange="data.banks[${i}].name=this.value;save(true)"></div><div class="field"><label>初始餘額</label><input type="number" step="0.1" value="${b.initial}" onchange="data.banks[${i}].initial=Number(this.value);save(true)"></div><div style="grid-column:1/-1"><button class="danger small" onclick="removeBank('${b.id}')">刪除銀行</button></div></div>`).join('')}
 function renderCardSettings(){cardSettings.innerHTML=data.cards.map((c,i)=>`<div class="form-grid" style="grid-template-columns:1fr 1fr;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #eee"><div class="field"><label>信用卡名稱</label><input value="${attr(c.name)}" onchange="data.cards[${i}].name=this.value;save(true)"></div><div class="field"><label>信用額度</label><input type="number" value="${c.limit}" onchange="data.cards[${i}].limit=Number(this.value);save(true)"></div><div style="grid-column:1/-1"><button class="danger small" onclick="removeCard('${c.id}')">刪除信用卡</button></div></div>`).join('')}
