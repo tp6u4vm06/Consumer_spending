@@ -169,8 +169,30 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
   padding:10px 16px;
   flex:0 0 auto;
 }
-.cc-box.clickable{cursor:pointer;transition:transform .12s ease,box-shadow .12s ease;}
+.cc-box.clickable{cursor:pointer;transition:transform .12s ease,box-shadow .12s ease;position:relative;}
 .cc-box.clickable:hover{box-shadow:0 6px 18px rgba(17,24,39,.08);}
+
+/* 信用卡每月繳費狀態 */
+.card-paid-badge{
+  flex:0 0 auto;
+  border:1px solid #d1d5db;
+  background:#f9fafb;
+  color:#6b7280;
+  border-radius:999px;
+  padding:4px 8px;
+  font-size:11px;
+  font-weight:800;
+  line-height:1;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.card-paid-badge.paid{
+  background:#ecfdf5;
+  border-color:#a7f3d0;
+  color:#047857;
+}
+.card-paid-badge:hover{filter:brightness(.98);}
+
 .card-detail{display:none;margin-top:14px;border-top:1px solid var(--line);padding-top:10px;}
 .card-detail-row{display:grid;grid-template-columns:64px 1fr auto;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);align-items:center;}
 .card-detail-total{display:flex;justify-content:space-between;gap:12px;padding-top:12px;font-weight:800;}
@@ -325,7 +347,13 @@ function currentMonth(){return new Date().toLocaleDateString('sv-SE',{timeZone:'
 function today(){return new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Taipei'})}
 function hasMeaningfulLocal(v){return !!(v&&(v.transactions?.length||v.banks?.some((b,i)=>Number(b.initial)!==Number(requiredBanks.find(x=>x.id===b.id)?.initial||0))||v.cards?.length>2))}
 function loadLocal(){try{const v=JSON.parse(localStorage.getItem(KEY));return v&&v.banks?migrate(v):structuredClone(seed)}catch(e){return structuredClone(seed)}}
-function migrate(v){v.cards=Array.isArray(v.cards)?v.cards:[];v.transactions=Array.isArray(v.transactions)?v.transactions:[];v.banks=Array.isArray(v.banks)?v.banks:[];return v}
+function migrate(v){
+  v.cards=Array.isArray(v.cards)?v.cards:[];
+  v.transactions=Array.isArray(v.transactions)?v.transactions:[];
+  v.banks=Array.isArray(v.banks)?v.banks:[];
+  v.cards=v.cards.map(c=>({...c,paidMonths:Array.isArray(c.paidMonths)?c.paidMonths:[]}));
+  return v
+}
 function cacheLocal(pending=false){localStorage.setItem(KEY,JSON.stringify(data));localStorage.setItem(PENDING_KEY,pending?'1':'0')}
 function setCloudState(state,text){cloudStatus.textContent=text;cloudDot.className='dot '+state}
 async function save(showMessage=false){cacheLocal(true);render();if(!currentUser||!sb){if(showMessage)toast('已暫存在本機');return}if(saving)return;saving=true;setCloudState('sync','同步中…');try{const {error}=await sb.from('finance_data').upsert({user_id:currentUser.id,data,updated_at:new Date().toISOString()},{onConflict:'user_id'});if(error)throw error;cacheLocal(false);setCloudState('ok','雲端已同步');if(showMessage)toast('已儲存並同步')}catch(e){console.error(e);setCloudState('bad','同步失敗');if(showMessage)toast('已存本機，雲端同步失敗')}finally{saving=false}}
@@ -380,14 +408,41 @@ function render(){
     const cardTx=cardMonth.filter(t=>t.accountId===c.id);
     const used=cardTx.reduce((sum,t)=>sum+Number(t.amount),0);
     const pct=c.limit?Math.min(100,used/Number(c.limit)*100):0;
+    const isPaid=Array.isArray(c.paidMonths)&&c.paidMonths.includes(selectedMonth);
     return `<div class="cc-box clickable" onclick="toggleCardDetail('${c.id}')">
-      <div class="cc-top"><div><div class="name">${esc(c.name)}</div><div class="meta">額度 ${money(c.limit)}｜點擊查看明細</div></div><div class="meta">${pct.toFixed(0)}%</div></div>
+      <div class="cc-top">
+        <div>
+          <div class="name">${esc(c.name)}</div>
+          <div class="meta">額度 ${money(c.limit)}｜點擊查看明細</div>
+        </div>
+        <button
+          type="button"
+          class="card-paid-badge ${isPaid?'paid':''}"
+          onclick="event.stopPropagation();toggleCardPaid('${c.id}')"
+          title="點一下切換本月繳費狀態"
+        >${isPaid?'✓ 已繳費':'未繳'}</button>
+      </div>
       <div class="money">${money(used)}</div><div class="bar"><i style="width:${pct}%"></i></div>
       <div id="cardDetail-${c.id}" class="card-detail"></div>
     </div>`;
   }).join('')||'<div class="empty">尚未設定信用卡</div>';
   renderTransactions();refreshAccounts();renderBankSettings();renderCardSettings();
 }
+async function toggleCardPaid(cardId){
+  const card=data.cards.find(c=>c.id===cardId);
+  if(!card)return;
+  if(!Array.isArray(card.paidMonths))card.paidMonths=[];
+  if(card.paidMonths.includes(selectedMonth)){
+    card.paidMonths=card.paidMonths.filter(m=>m!==selectedMonth);
+    await save(false);
+    toast('已改為本月未繳');
+  }else{
+    card.paidMonths.push(selectedMonth);
+    await save(false);
+    toast('已標記本月卡費為已繳費');
+  }
+}
+
 function toggleCardDetail(cardId){
   const box=document.getElementById(`cardDetail-${cardId}`);
   if(!box)return;
@@ -433,7 +488,7 @@ quickForm.addEventListener('submit',async e=>{
 async function delTx(id){if(confirm('確定刪除這筆紀錄？')){data.transactions=data.transactions.filter(t=>t.id!==id);await save(true)}}
 function renderBankSettings(){bankSettings.innerHTML=data.banks.map((b,i)=>`<div class="form-grid" style="grid-template-columns:1fr 1fr;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #eee"><div class="field"><label>銀行名稱</label><input value="${attr(b.name)}" onchange="data.banks[${i}].name=this.value;save(true)"></div><div class="field"><label>初始餘額</label><input type="number" step="0.1" value="${b.initial}" onchange="data.banks[${i}].initial=Number(this.value);save(true)"></div><div style="grid-column:1/-1"><button class="danger small" onclick="removeBank('${b.id}')">刪除銀行</button></div></div>`).join('')}
 function renderCardSettings(){cardSettings.innerHTML=data.cards.map((c,i)=>`<div class="form-grid" style="grid-template-columns:1fr 1fr;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #eee"><div class="field"><label>信用卡名稱</label><input value="${attr(c.name)}" onchange="data.cards[${i}].name=this.value;save(true)"></div><div class="field"><label>信用額度</label><input type="number" value="${c.limit}" onchange="data.cards[${i}].limit=Number(this.value);save(true)"></div><div style="grid-column:1/-1"><button class="danger small" onclick="removeCard('${c.id}')">刪除信用卡</button></div></div>`).join('')}
-async function addBank(){data.banks.push({id:'bank-'+Date.now(),name:'新銀行',initial:0});await save(true)}async function addCard(){data.cards.push({id:'card-'+Date.now(),name:'新信用卡',limit:0});await save(true)}
+async function addBank(){data.banks.push({id:'bank-'+Date.now(),name:'新銀行',initial:0});await save(true)}async function addCard(){data.cards.push({id:'card-'+Date.now(),name:'新信用卡',limit:0,paidMonths:[]});await save(true)}
 async function removeBank(id){if(data.transactions.some(t=>t.accountId===id))return toast('此銀行已有交易，請先刪除相關交易');data.banks=data.banks.filter(x=>x.id!==id);await save(true)}async function removeCard(id){if(data.transactions.some(t=>t.accountId===id))return toast('此信用卡已有交易，請先刪除相關交易');data.cards=data.cards.filter(x=>x.id!==id);await save(true)}
 function openBankModal(){bankModal.classList.add('show')}function openCardModal(){cardModal.classList.add('show')}function closeModal(id){document.getElementById(id).classList.remove('show')}
 function exportData(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`finance-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
