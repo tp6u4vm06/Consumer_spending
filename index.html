@@ -232,6 +232,51 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
   .card-detail-row{grid-template-columns:58px 1fr auto;gap:6px;}
 }
 
+
+/* ===== 手機版：底部固定導覽列 ===== */
+@media(max-width:620px){
+  .page-tabs{
+    position:fixed !important;
+    left:12px !important;
+    right:12px !important;
+    bottom:12px !important;
+    top:auto !important;
+    z-index:60 !important;
+    display:flex !important;
+    gap:8px !important;
+    margin:0 !important;
+    padding:7px !important;
+    background:rgba(255,255,255,.96) !important;
+    border:1px solid var(--line) !important;
+    border-radius:16px !important;
+    box-shadow:0 10px 30px rgba(17,24,39,.16) !important;
+    -webkit-backdrop-filter:blur(10px);
+    backdrop-filter:blur(10px);
+  }
+
+  .page-tab{
+    flex:1 !important;
+    height:46px !important;
+    padding:0 12px !important;
+    border-radius:11px !important;
+    box-shadow:none !important;
+    font-size:14px !important;
+  }
+
+  .page-tab.active{
+    background:#111827 !important;
+    color:#fff !important;
+  }
+
+  .shell{
+    padding-bottom:92px !important;
+  }
+
+  .footer-note{
+    margin-bottom:18px !important;
+  }
+}
+
 </style>
 </head>
 <body>
