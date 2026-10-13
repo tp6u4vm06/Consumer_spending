@@ -1,947 +1,1115 @@
-  <!DOCTYPE html>
-  <html lang="zh-Hant">
-  <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#111827" />
-  <title>我的收支紀錄</title>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
-  window.FINANCE_CONFIG = {
-    SUPABASE_URL: "https://ydiluqlwdvijlnjvomzu.supabase.co",
-    SUPABASE_PUBLISHABLE_KEY: "sb_publishable_SI0YMgwU5N2T4ryCFSCKAg_Rd6z8_RX"
-  };
-  </script>
-  <style>
-  :root{--bg:#f4f6f8;--panel:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--accent:#2563eb;--good:#047857;--warn:#b45309;--bad:#b91c1c;--shadow:0 10px 30px rgba(17,24,39,.06)}
-  *{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",Arial,sans-serif;color:var(--text)}
-  .shell{max-width:1180px;margin:auto;padding:22px}.topbar{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:18px}.brand h1{font-size:24px;margin:0 0 4px}.brand p{margin:0;color:var(--muted);font-size:14px}.actions{display:flex;gap:8px;flex-wrap:wrap}
-  button,.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;background:#111827;color:#fff;font-size:14px}.secondary{background:#fff;color:#111827;border:1px solid var(--line)}.danger{background:#fff;color:var(--bad);border:1px solid #fecaca}.small{padding:7px 10px;font-size:12px}
-  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px}.kpi{grid-column:span 3}.kpi .label{font-size:13px;color:var(--muted)}.kpi .value{font-size:28px;font-weight:800;margin-top:7px;letter-spacing:-.5px}.kpi .sub{font-size:12px;color:var(--muted);margin-top:5px}
-  .span12{grid-column:span 12}.section-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}.section-title h2{font-size:17px;margin:0}.section-title span{font-size:12px;color:var(--muted)}
-  .monthbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}.month-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.month-controls input{padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:14px;background:#fff}.month-label{font-weight:800;font-size:18px}
-  .form-grid{display:grid;grid-template-columns:1.15fr 1fr 1.4fr 1fr 1fr 1.6fr auto;gap:9px;align-items:end}.field label{display:block;font-size:12px;color:var(--muted);margin:0 0 5px}.field input,.field select{width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:14px;outline:none}.field input:focus,.field select:focus{border-color:#93c5fd;box-shadow:0 0 0 3px #dbeafe}.quick-submit button{height:39px;white-space:nowrap}
-  .bank-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 28px}.bank-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #f1f5f9}.bank-item:nth-last-child(-n+2){border-bottom:0}.name{font-weight:700}.meta{font-size:12px;color:var(--muted);margin-top:3px}.money{font-weight:800;text-align:right}.money.neg{color:var(--bad)}.money.pos{color:var(--good)}
-  .card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}.cc-box{border:1px solid var(--line);border-radius:13px;padding:13px;background:#fbfcfe}.cc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.cc-box .money{font-size:20px;margin-top:5px}.bar{height:7px;border-radius:999px;background:#eef2f7;overflow:hidden;margin-top:9px}.bar i{display:block;height:100%;background:#111827;border-radius:999px}
-  .pill{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#eef2ff;color:#3730a3}.pill.expense{background:#fef2f2;color:#991b1b}.pill.income{background:#ecfdf5;color:#065f46}.pill.cardpay{background:#fff7ed;color:#9a3412}.pill.transfer{background:#eff6ff;color:#1d4ed8}
-  table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;color:var(--muted);font-weight:700;padding:9px 8px;border-bottom:1px solid var(--line)}td{padding:10px 8px;border-bottom:1px solid #f3f4f6;vertical-align:middle}.right{text-align:right}.empty{text-align:center;padding:28px;color:var(--muted)}
-  .searchbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.searchbar input{min-width:250px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:14px}
-  .modal{position:fixed;inset:0;background:rgba(17,24,39,.45);display:none;align-items:center;justify-content:center;padding:18px;z-index:10}.modal.show{display:flex}.modal-box{width:min(560px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:16px;padding:20px}.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}.modal-head h3{margin:0}.close{background:#f3f4f6;color:#111827;padding:8px 11px}.footer-note{font-size:12px;color:var(--muted);margin-top:14px;line-height:1.6}.toast{position:fixed;right:20px;bottom:20px;background:#111827;color:#fff;padding:11px 14px;border-radius:10px;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none}.toast.show{opacity:1;transform:none}
-  .auth-gate{position:fixed;inset:0;background:rgba(244,246,248,.98);z-index:100;display:flex;align-items:center;justify-content:center;padding:18px}.auth-gate.hidden{display:none}.auth-box{width:min(430px,100%);background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:24px}.auth-box h2{margin:0 0 8px}.auth-box p{color:var(--muted);font-size:13px;line-height:1.6}.auth-box input{width:100%;padding:11px;border:1px solid var(--line);border-radius:9px;margin:5px 0 10px;font-size:14px}.auth-buttons{display:flex;gap:8px}.auth-buttons button{flex:1}.cloud-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:#fff;font-size:12px;font-weight:700}.dot{width:8px;height:8px;border-radius:50%;background:#9ca3af}.dot.ok{background:#10b981}.dot.sync{background:#f59e0b}.dot.bad{background:#ef4444}.sync-note{font-size:12px;color:var(--muted);margin-top:7px}.config-help{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px;color:#9a3412;font-size:12px;line-height:1.55;margin-top:10px}
-  @media(max-width:940px){.kpi{grid-column:span 6}.form-grid{grid-template-columns:repeat(2,1fr)}.quick-submit{grid-column:1/-1}.quick-submit button{width:100%}}
-  @media(max-width:620px){.shell{padding:14px}.topbar{align-items:flex-start;flex-direction:column}.kpi{grid-column:span 12}.bank-grid{grid-template-columns:1fr}.bank-item{border-bottom:1px solid #f1f5f9!important}.bank-item:last-child{border-bottom:0!important}.form-grid{grid-template-columns:1fr}.quick-submit{grid-column:auto}.card-grid{grid-template-columns:1fr}.card{padding:15px}.kpi .value{font-size:25px}.table-wrap{overflow:auto}table{min-width:760px}.searchbar input{min-width:0;width:100%}.monthbar{align-items:flex-start;flex-direction:column}}
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#111827" />
+<title>我的收支紀錄</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+window.FINANCE_CONFIG = {
+  SUPABASE_URL: "https://ydiluqlwdvijlnjvomzu.supabase.co",
+  SUPABASE_PUBLISHABLE_KEY: "sb_publishable_SI0YMgwU5N2T4ryCFSCKAg_Rd6z8_RX"
+};
+</script>
+<style>
+:root{--bg:#f4f6f8;--panel:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--accent:#2563eb;--good:#047857;--warn:#b45309;--bad:#b91c1c;--shadow:0 10px 30px rgba(17,24,39,.06)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",Arial,sans-serif;color:var(--text)}
+.shell{max-width:1180px;margin:auto;padding:22px}.topbar{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:18px}.brand h1{font-size:24px;margin:0 0 4px}.brand p{margin:0;color:var(--muted);font-size:14px}.actions{display:flex;gap:8px;flex-wrap:wrap}
+button,.btn{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;background:#111827;color:#fff;font-size:14px}.secondary{background:#fff;color:#111827;border:1px solid var(--line)}.danger{background:#fff;color:var(--bad);border:1px solid #fecaca}.small{padding:7px 10px;font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px}.kpi{grid-column:span 3}.kpi .label{font-size:13px;color:var(--muted)}.kpi .value{font-size:28px;font-weight:800;margin-top:7px;letter-spacing:-.5px}.kpi .sub{font-size:12px;color:var(--muted);margin-top:5px}
+.span12{grid-column:span 12}.section-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}.section-title h2{font-size:17px;margin:0}.section-title span{font-size:12px;color:var(--muted)}
+.monthbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}.month-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.month-controls input{padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:14px;background:#fff}.month-label{font-weight:800;font-size:18px}
+.form-grid{display:grid;grid-template-columns:1.15fr 1fr 1.4fr 1fr 1fr 1.6fr auto;gap:9px;align-items:end}.field label{display:block;font-size:12px;color:var(--muted);margin:0 0 5px}.field input,.field select{width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:14px;outline:none}.field input:focus,.field select:focus{border-color:#93c5fd;box-shadow:0 0 0 3px #dbeafe}.quick-submit button{height:39px;white-space:nowrap}
+.bank-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 28px}.bank-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #f1f5f9}.bank-item:nth-last-child(-n+2){border-bottom:0}.name{font-weight:700}.meta{font-size:12px;color:var(--muted);margin-top:3px}.money{font-weight:800;text-align:right}.money.neg{color:var(--bad)}.money.pos{color:var(--good)}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}.cc-box{border:1px solid var(--line);border-radius:13px;padding:13px;background:#fbfcfe}.cc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.cc-box .money{font-size:20px;margin-top:5px}.bar{height:7px;border-radius:999px;background:#eef2f7;overflow:hidden;margin-top:9px}.bar i{display:block;height:100%;background:#111827;border-radius:999px}
+.pill{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#eef2ff;color:#3730a3}.pill.expense{background:#fef2f2;color:#991b1b}.pill.income{background:#ecfdf5;color:#065f46}.pill.cardpay{background:#fff7ed;color:#9a3412}.pill.transfer{background:#eff6ff;color:#1d4ed8}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;color:var(--muted);font-weight:700;padding:9px 8px;border-bottom:1px solid var(--line)}td{padding:10px 8px;border-bottom:1px solid #f3f4f6;vertical-align:middle}.right{text-align:right}.empty{text-align:center;padding:28px;color:var(--muted)}
+.searchbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.searchbar input{min-width:250px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:14px}
+.modal{position:fixed;inset:0;background:rgba(17,24,39,.45);display:none;align-items:center;justify-content:center;padding:18px;z-index:10}.modal.show{display:flex}.modal-box{width:min(560px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:16px;padding:20px}.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}.modal-head h3{margin:0}.close{background:#f3f4f6;color:#111827;padding:8px 11px}.footer-note{font-size:12px;color:var(--muted);margin-top:14px;line-height:1.6}.toast{position:fixed;right:20px;bottom:20px;background:#111827;color:#fff;padding:11px 14px;border-radius:10px;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none}.toast.show{opacity:1;transform:none}
+.auth-gate{position:fixed;inset:0;background:rgba(244,246,248,.98);z-index:100;display:flex;align-items:center;justify-content:center;padding:18px}.auth-gate.hidden{display:none}.auth-box{width:min(430px,100%);background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:24px}.auth-box h2{margin:0 0 8px}.auth-box p{color:var(--muted);font-size:13px;line-height:1.6}.auth-box input{width:100%;padding:11px;border:1px solid var(--line);border-radius:9px;margin:5px 0 10px;font-size:14px}.auth-buttons{display:flex;gap:8px}.auth-buttons button{flex:1}.cloud-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:#fff;font-size:12px;font-weight:700}.dot{width:8px;height:8px;border-radius:50%;background:#9ca3af}.dot.ok{background:#10b981}.dot.sync{background:#f59e0b}.dot.bad{background:#ef4444}.sync-note{font-size:12px;color:var(--muted);margin-top:7px}.config-help{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px;color:#9a3412;font-size:12px;line-height:1.55;margin-top:10px}
+@media(max-width:940px){.kpi{grid-column:span 6}.form-grid{grid-template-columns:repeat(2,1fr)}.quick-submit{grid-column:1/-1}.quick-submit button{width:100%}}
+@media(max-width:620px){.shell{padding:14px}.topbar{align-items:flex-start;flex-direction:column}.kpi{grid-column:span 12}.bank-grid{grid-template-columns:1fr}.bank-item{border-bottom:1px solid #f1f5f9!important}.bank-item:last-child{border-bottom:0!important}.form-grid{grid-template-columns:1fr}.quick-submit{grid-column:auto}.card-grid{grid-template-columns:1fr}.card{padding:15px}.kpi .value{font-size:25px}.table-wrap{overflow:auto}table{min-width:760px}.searchbar input{min-width:0;width:100%}.monthbar{align-items:flex-start;flex-direction:column}}
 
-  .page-tabs{display:flex;gap:8px;margin:0 0 14px;position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0}
-  .page-tab{flex:1;background:#fff;color:#111827;border:1px solid var(--line);box-shadow:var(--shadow)}
-  .page-tab.active{background:#111827;color:#fff}
-  .app-page{display:none}.app-page.active{display:block}
-  .privacy-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
-  .privacy-btn{padding:7px 10px;font-size:12px}.masked{letter-spacing:2px}
-  @media(max-width:620px){
-   input[type="date"],input[type="month"]{min-width:0!important;max-width:100%!important;width:100%!important;font-size:16px!important}
-   .field{min-width:0}.field input,.field select{min-width:0;max-width:100%}
-   .month-controls{width:100%}.month-controls input{flex:1}
-   .topbar .brand p{display:none}.actions{width:100%}
-   .actions .secondary:not(#logoutBtn){font-size:12px;padding:8px 9px}
+.page-tabs{display:flex;gap:8px;margin:0 0 14px;position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0}
+.page-tab{flex:1;background:#fff;color:#111827;border:1px solid var(--line);box-shadow:var(--shadow)}
+.page-tab.active{background:#111827;color:#fff}
+.app-page{display:none}.app-page.active{display:block}
+.privacy-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.privacy-btn{padding:7px 10px;font-size:12px}.masked{letter-spacing:2px}
+@media(max-width:620px){
+ input[type="date"],input[type="month"]{min-width:0!important;max-width:100%!important;width:100%!important;font-size:16px!important}
+ .field{min-width:0}.field input,.field select{min-width:0;max-width:100%}
+ .month-controls{width:100%}.month-controls input{flex:1}
+ .topbar .brand p{display:none}.actions{width:100%}
+ .actions .secondary:not(#logoutBtn){font-size:12px;padding:8px 9px}
+}
+
+
+/* iPhone / Safari 日期欄位修正版 */
+*, *::before, *::after { box-sizing: border-box; }
+
+.form-grid,
+.field,
+.field input,
+.field select {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 620px) {
+  .form-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100% !important;
   }
 
+  .field {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden;
+  }
 
-  /* iPhone / Safari 日期欄位修正版 */
-  *, *::before, *::after { box-sizing: border-box; }
-
-  .form-grid,
-  .field,
   .field input,
-  .field select {
+  .field select,
+  input[type="date"],
+  input[type="month"] {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  input[type="date"] {
+    -webkit-appearance: none;
+    appearance: none;
+    overflow: hidden;
+    font-size: 16px !important;
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  input[type="date"]::-webkit-date-and-time-value {
+    text-align: left;
     min-width: 0;
-    max-width: 100%;
   }
 
-  @media (max-width: 620px) {
-    .form-grid {
-      display: grid !important;
-      grid-template-columns: minmax(0, 1fr) !important;
-      width: 100% !important;
-    }
-
-    .field {
-      width: 100% !important;
-      min-width: 0 !important;
-      max-width: 100% !important;
-      overflow: hidden;
-    }
-
-    .field input,
-    .field select,
-    input[type="date"],
-    input[type="month"] {
-      display: block !important;
-      width: 100% !important;
-      min-width: 0 !important;
-      max-width: 100% !important;
-      box-sizing: border-box !important;
-    }
-
-    input[type="date"] {
-      -webkit-appearance: none;
-      appearance: none;
-      overflow: hidden;
-      font-size: 16px !important;
-      padding-left: 14px !important;
-      padding-right: 14px !important;
-    }
-
-    input[type="date"]::-webkit-date-and-time-value {
-      text-align: left;
-      min-width: 0;
-    }
-
-    input[type="date"]::-webkit-datetime-edit {
-      min-width: 0;
-      padding: 0;
-    }
-
-    input[type="date"]::-webkit-calendar-picker-indicator {
-      margin-left: auto;
-    }
-
-    .quick-submit,
-    .quick-submit button {
-      width: 100% !important;
-      max-width: 100% !important;
-    }
+  input[type="date"]::-webkit-datetime-edit {
+    min-width: 0;
+    padding: 0;
   }
 
-
-  /* 銀行餘額顏色分級 */
-  .balance-high{
-    color:#16a34a !important;
-    font-weight:800;
-  }
-  .balance-mid{
-    color:#f59e0b !important;
-    font-weight:800;
-  }
-  .balance-low{
-    color:#dc2626 !important;
-    font-weight:800;
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    margin-left: auto;
   }
 
+  .quick-submit,
+  .quick-submit button {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
 
 
-  /* ===== 快速登錄穩定排版：電腦六欄、手機單欄，底部操作列左右排列 ===== */
+/* 銀行餘額顏色分級 */
+.balance-high{
+  color:#16a34a !important;
+  font-weight:800;
+}
+.balance-mid{
+  color:#f59e0b !important;
+  font-weight:800;
+}
+.balance-low{
+  color:#dc2626 !important;
+  font-weight:800;
+}
+
+
+
+/* ===== 快速登錄穩定排版：電腦六欄、手機單欄，底部操作列左右排列 ===== */
+.form-grid{
+  display:grid !important;
+  grid-template-columns:1.15fr 1fr 1.4fr 1fr 1fr 1.6fr !important;
+  gap:9px !important;
+  align-items:end !important;
+}
+.form-grid > .field{min-width:0 !important;}
+.quick-bottom-row{
+  grid-column:1 / -1;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:14px;
+  margin-top:6px;
+  width:100%;
+}
+.next-month-option{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  color:#2563eb;
+  font-weight:700;
+  font-size:13px;
+  cursor:pointer;
+  line-height:1.2;
+}
+.next-month-option input{
+  width:auto !important;
+  min-width:auto !important;
+  margin:0 !important;
+  flex:0 0 auto;
+}
+.quick-save-btn{
+  min-width:82px;
+  height:39px;
+  padding:10px 16px;
+  flex:0 0 auto;
+}
+.cc-box.clickable{cursor:pointer;transition:transform .12s ease,box-shadow .12s ease;position:relative;}
+.cc-box.clickable:hover{box-shadow:0 6px 18px rgba(17,24,39,.08);}
+
+/* 信用卡每月繳費狀態 */
+.card-paid-badge{
+  flex:0 0 auto;
+  border:1px solid #d1d5db;
+  background:#f9fafb;
+  color:#6b7280;
+  border-radius:999px;
+  padding:4px 8px;
+  font-size:11px;
+  font-weight:800;
+  line-height:1;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.card-paid-badge.paid{
+  background:#ecfdf5;
+  border-color:#a7f3d0;
+  color:#047857;
+}
+.card-paid-badge:hover{filter:brightness(.98);}
+
+.card-detail{display:none;margin-top:14px;border-top:1px solid var(--line);padding-top:10px;}
+.card-detail-row{display:grid;grid-template-columns:64px 1fr auto;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);align-items:center;}
+.card-detail-total{display:flex;justify-content:space-between;gap:12px;padding-top:12px;font-weight:800;}
+.cross-month-tag{color:#2563eb;font-weight:700;}
+
+@media(max-width:940px){
+  .form-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
+  .quick-bottom-row{grid-column:1 / -1 !important;}
+}
+
+@media(max-width:620px){
   .form-grid{
-    display:grid !important;
-    grid-template-columns:1.15fr 1fr 1.4fr 1fr 1fr 1.6fr !important;
-    gap:9px !important;
-    align-items:end !important;
+    grid-template-columns:minmax(0,1fr) !important;
+    width:100% !important;
   }
-  .form-grid > .field{min-width:0 !important;}
   .quick-bottom-row{
-    grid-column:1 / -1;
-    display:flex;
-    align-items:center;
-    justify-content:flex-end;
-    gap:14px;
-    margin-top:6px;
-    width:100%;
+    grid-column:1 / -1 !important;
+    display:flex !important;
+    flex-direction:row !important;
+    align-items:center !important;
+    justify-content:space-between !important;
+    gap:10px !important;
+    margin-top:4px !important;
   }
   .next-month-option{
-    display:flex;
-    align-items:center;
-    gap:6px;
-    color:#2563eb;
-    font-weight:700;
+    flex:1 1 auto;
+    min-width:0;
+    white-space:nowrap;
     font-size:13px;
-    cursor:pointer;
-    line-height:1.2;
-  }
-  .next-month-option input{
-    width:auto !important;
-    min-width:auto !important;
-    margin:0 !important;
-    flex:0 0 auto;
   }
   .quick-save-btn{
-    min-width:82px;
-    height:39px;
-    padding:10px 16px;
+    width:auto !important;
+    min-width:82px !important;
+    max-width:none !important;
     flex:0 0 auto;
   }
-  .cc-box.clickable{cursor:pointer;transition:transform .12s ease,box-shadow .12s ease;position:relative;}
-  .cc-box.clickable:hover{box-shadow:0 6px 18px rgba(17,24,39,.08);}
+  .card-detail-row{grid-template-columns:58px 1fr auto;gap:6px;}
+}
 
-  /* 信用卡每月繳費狀態 */
-  .card-paid-badge{
-    flex:0 0 auto;
-    border:1px solid #d1d5db;
-    background:#f9fafb;
-    color:#6b7280;
-    border-radius:999px;
-    padding:4px 8px;
-    font-size:11px;
-    font-weight:800;
-    line-height:1;
-    cursor:pointer;
-    white-space:nowrap;
-  }
-  .card-paid-badge.paid{
-    background:#ecfdf5;
-    border-color:#a7f3d0;
-    color:#047857;
-  }
-  .card-paid-badge:hover{filter:brightness(.98);}
 
-  .card-detail{display:none;margin-top:14px;border-top:1px solid var(--line);padding-top:10px;}
-  .card-detail-row{display:grid;grid-template-columns:64px 1fr auto;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);align-items:center;}
-  .card-detail-total{display:flex;justify-content:space-between;gap:12px;padding-top:12px;font-weight:800;}
-  .cross-month-tag{color:#2563eb;font-weight:700;}
-
-  @media(max-width:940px){
-    .form-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
-    .quick-bottom-row{grid-column:1 / -1 !important;}
+/* ===== 手機版：底部固定導覽列 ===== */
+@media(max-width:620px){
+  .page-tabs{
+    position:fixed !important;
+    left:12px !important;
+    right:12px !important;
+    bottom:12px !important;
+    top:auto !important;
+    z-index:60 !important;
+    display:flex !important;
+    gap:8px !important;
+    margin:0 !important;
+    padding:7px !important;
+    background:rgba(255,255,255,.96) !important;
+    border:1px solid var(--line) !important;
+    border-radius:16px !important;
+    box-shadow:0 10px 30px rgba(17,24,39,.16) !important;
+    -webkit-backdrop-filter:blur(10px);
+    backdrop-filter:blur(10px);
   }
 
-  @media(max-width:620px){
-    .form-grid{
-      grid-template-columns:minmax(0,1fr) !important;
-      width:100% !important;
-    }
-    .quick-bottom-row{
-      grid-column:1 / -1 !important;
-      display:flex !important;
-      flex-direction:row !important;
-      align-items:center !important;
-      justify-content:space-between !important;
-      gap:10px !important;
-      margin-top:4px !important;
-    }
-    .next-month-option{
-      flex:1 1 auto;
-      min-width:0;
-      white-space:nowrap;
-      font-size:13px;
-    }
-    .quick-save-btn{
-      width:auto !important;
-      min-width:82px !important;
-      max-width:none !important;
-      flex:0 0 auto;
-    }
-    .card-detail-row{grid-template-columns:58px 1fr auto;gap:6px;}
+  .page-tab{
+    flex:1 !important;
+    height:46px !important;
+    padding:0 12px !important;
+    border-radius:11px !important;
+    box-shadow:none !important;
+    font-size:14px !important;
   }
 
-
-  /* ===== 手機版：底部固定導覽列 ===== */
-  @media(max-width:620px){
-    .page-tabs{
-      position:fixed !important;
-      left:12px !important;
-      right:12px !important;
-      bottom:12px !important;
-      top:auto !important;
-      z-index:60 !important;
-      display:flex !important;
-      gap:8px !important;
-      margin:0 !important;
-      padding:7px !important;
-      background:rgba(255,255,255,.96) !important;
-      border:1px solid var(--line) !important;
-      border-radius:16px !important;
-      box-shadow:0 10px 30px rgba(17,24,39,.16) !important;
-      -webkit-backdrop-filter:blur(10px);
-      backdrop-filter:blur(10px);
-    }
-
-    .page-tab{
-      flex:1 !important;
-      height:46px !important;
-      padding:0 12px !important;
-      border-radius:11px !important;
-      box-shadow:none !important;
-      font-size:14px !important;
-    }
-
-    .page-tab.active{
-      background:#111827 !important;
-      color:#fff !important;
-    }
-
-    .shell{
-      padding-bottom:92px !important;
-    }
-
-    .footer-note{
-      margin-bottom:18px !important;
-    }
+  .page-tab.active{
+    background:#111827 !important;
+    color:#fff !important;
   }
 
-  </style>
-  </head>
-  <body>
-  <div class="shell">
-    <div class="topbar">
-      <div class="brand"><h1>我的收支紀錄</h1><p>銀行餘額、信用卡刷費與每月收支，一頁掌握</p></div>
-      <div class="actions">
-        <div id="accountChip" class="cloud-chip" style="display:none">帳號：<span id="accountEmail"></span></div>
-        <div class="cloud-chip"><span id="cloudDot" class="dot"></span><span id="cloudStatus">未登入</span></div>
-        <button id="logoutBtn" class="secondary" onclick="signOutUser()" style="display:none">登出</button>
-        <button id="resetAccountBtn" class="danger small" onclick="resetCurrentAccount()" style="display:none">清空此帳號資料</button>
-        <button class="secondary" onclick="openBankModal()">銀行設定</button>
-        <button class="secondary" onclick="openCardModal()">信用卡設定</button>
-        <button class="secondary" onclick="exportExcel()">匯出 Excel</button>
-        <button class="secondary" onclick="exportData()">JSON 備份</button>
-        <label class="btn secondary" for="importFile">匯入備份</label><input id="importFile" type="file" accept="application/json" hidden />
-      </div>
+  .shell{
+    padding-bottom:92px !important;
+  }
+
+  .footer-note{
+    margin-bottom:18px !important;
+  }
+}
+
+
+.edit-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.edit-form-grid .field{min-width:0}
+.edit-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+@media(max-width:620px){
+  .edit-form-grid{grid-template-columns:1fr}
+  .edit-actions button{flex:1}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="topbar">
+    <div class="brand"><h1>我的收支紀錄</h1><p>銀行餘額、信用卡刷費與每月收支，一頁掌握</p></div>
+    <div class="actions">
+      <div id="accountChip" class="cloud-chip" style="display:none">帳號：<span id="accountEmail"></span></div>
+      <div class="cloud-chip"><span id="cloudDot" class="dot"></span><span id="cloudStatus">未登入</span></div>
+      <button id="logoutBtn" class="secondary" onclick="signOutUser()" style="display:none">登出</button>
+      <button id="resetAccountBtn" class="danger small" onclick="resetCurrentAccount()" style="display:none">清空此帳號資料</button>
+      <button class="secondary" onclick="openBankModal()">銀行設定</button>
+      <button class="secondary" onclick="openCardModal()">信用卡設定</button>
+      <button class="secondary" onclick="exportExcel()">匯出 Excel</button>
+      <button class="secondary" onclick="exportData()">JSON 備份</button>
+      <label class="btn secondary" for="importFile">匯入備份</label><input id="importFile" type="file" accept="application/json" hidden />
     </div>
-
-    <div class="page-tabs">
-      <button id="tabRecord" class="page-tab active" onclick="showPage('record')">快速紀錄</button>
-      <button id="tabOverview" class="page-tab" onclick="showPage('overview')">資金總覽</button>
-    </div>
-
-    <div id="recordPage" class="app-page active">
-      <div class="grid">
-        <div class="card span12 monthbar">
-          <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">目前查看月份</div><div class="month-label" id="monthTitle"></div></div>
-          <div class="month-controls"><button class="secondary small" onclick="moveMonth(-1)">← 上月</button><input id="monthPicker" type="month" /><button class="secondary small" onclick="moveMonth(1)">下月 →</button><button class="secondary small" onclick="goCurrentMonth()">回本月</button></div>
-        </div>
-        <div class="card span12">
-          <div class="section-title"><h2>快速登錄</h2><span>快速輸入</span></div>
-          <form id="quickForm" class="form-grid">
-            <div class="field"><label>類型</label><select id="qType"><option value="card">信用卡刷費</option><option value="expense">銀行／現金支出</option><option value="income">收入</option><option value="cardpay">繳信用卡費</option><option value="transfer">帳戶轉帳</option></select></div>
-            <div class="field"><label>日期</label><input id="qDate" type="date" required /></div>
-            <div class="field"><label id="qAccountLabel">帳戶／信用卡</label><select id="qAccount"></select></div>
-            <div id="qToWrap" class="field" style="display:none"><label>轉入帳戶</label><select id="qToAccount"></select></div>
-            <div class="field"><label>金額</label><input id="qAmount" type="number" min="0" step="1" inputmode="numeric" placeholder="少花點" required /></div>
-            <div id="categoryWrap" class="field"><label>分類</label><select id="qCategory"><option>餐飲</option><option>交通</option><option>生活</option><option>購物</option><option>娛樂</option><option>日用品</option><option>醫療</option><option>學校</option><option>保險</option><option>其他</option></select></div>
-            <div class="field"><label>備註</label><input id="qNote" placeholder="例如：別再花錢了~" /></div>
-            <div class="quick-bottom-row">
-              <label id="nextMonthWrap" class="next-month-option" style="display:none;">
-                <input type="checkbox" id="nextMonthCard" />
-                <span>此筆列入下月卡費</span>
-              </label>
-              <button type="submit" class="quick-save-btn">儲存</button>
-            </div>
-          </form>
-        </div>
-        <div class="card span12">
-          <div class="section-title"><h2>信用卡本月使用</h2><span id="cardMonthLabel"></span></div>
-          <div id="cardList" class="card-grid"></div>
-        </div>
-        <div class="card span12">
-          <div class="section-title"><h2>每月紀錄搜尋</h2><span id="txCount"></span></div>
-          <div class="searchbar" style="margin-bottom:10px"><input id="txSearch" type="search" placeholder="搜尋帳戶、分類或備註…" /><button class="secondary small" onclick="clearSearch()">清除搜尋</button></div>
-          <div class="table-wrap"><table><thead><tr><th>日期</th><th>類型</th><th>帳戶</th><th>分類</th><th>備註</th><th class="right">金額</th><th></th></tr></thead><tbody id="txBody"></tbody></table></div>
-        </div>
-      </div>
-    </div>
-
-    <div id="overviewPage" class="app-page">
-      <div class="grid">
-        <div class="card kpi"><div class="privacy-row"><div class="label">銀行目前總額</div><button id="privacyBtn" class="secondary privacy-btn" onclick="toggleBankTotal()">顯示</button></div><div class="value masked" id="kBank">••••••</div><div class="sub">預設隱藏，可隨時切換</div></div>
-        <div class="card kpi"><div class="label">所選月份信用卡刷費</div><div class="value" id="kCard">$0</div><div class="sub" id="kCardSub">0 筆刷卡</div></div>
-        <div class="card kpi"><div class="label">所選月份收入</div><div class="value" id="kIncome">$0</div><div class="sub">依交易日期計算</div></div>
-        <div class="card kpi"><div class="label">所選月份現金支出</div><div class="value" id="kExpense">$0</div><div class="sub">不含信用卡刷費</div></div>
-        <div class="card span12">
-          <div class="section-title"><h2>各家銀行餘額</h2></div>
-          <div id="bankList" class="bank-grid"></div>
-        </div>
-      </div>
-    </div>
-    <div class="footer-note">主要資料儲存在 Supabase 雲端，同一帳號在手機、電腦與不同瀏覽器會讀取同一份紀錄；瀏覽器 LocalStorage 僅作為暫存與離線備援。建議仍定期匯出 Excel。</div>
   </div>
 
-  <div id="authGate" class="auth-gate">
-    <div class="auth-box">
-      <h2>我的收支紀錄</h2>
-      <p>登入後即可跨手機、電腦同步同一份銀行與信用卡紀錄。</p>
-      <div id="configWarning" class="config-help" style="display:none">Supabase 連線設定未載入。請確認已部署此最新版 index.html。</div>
-      <div id="authForm">
-        <input id="authEmail" type="email" autocomplete="email" placeholder="Email" />
-        <input id="authPassword" type="password" autocomplete="current-password" placeholder="密碼（至少 6 碼）" />
-        <div class="auth-buttons"><button onclick="signInUser()">登入</button><button class="secondary" onclick="signUpUser()">第一次建立帳號</button></div>
-        <div id="authMessage" class="sync-note"></div>
+  <div class="page-tabs">
+    <button id="tabRecord" class="page-tab active" onclick="showPage('record')">快速紀錄</button>
+    <button id="tabOverview" class="page-tab" onclick="showPage('overview')">資金總覽</button>
+  </div>
+
+  <div id="recordPage" class="app-page active">
+    <div class="grid">
+      <div class="card span12 monthbar">
+        <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">目前查看月份</div><div class="month-label" id="monthTitle"></div></div>
+        <div class="month-controls"><button class="secondary small" onclick="moveMonth(-1)">← 上月</button><input id="monthPicker" type="month" /><button class="secondary small" onclick="moveMonth(1)">下月 →</button><button class="secondary small" onclick="goCurrentMonth()">回本月</button></div>
+      </div>
+      <div class="card span12">
+        <div class="section-title"><h2>快速登錄</h2><span>快速輸入</span></div>
+        <form id="quickForm" class="form-grid">
+          <div class="field"><label>類型</label><select id="qType"><option value="card">信用卡刷費</option><option value="expense">銀行／現金支出</option><option value="income">收入</option><option value="cardpay">繳信用卡費</option><option value="transfer">帳戶轉帳</option></select></div>
+          <div class="field"><label>日期</label><input id="qDate" type="date" required /></div>
+          <div class="field"><label id="qAccountLabel">帳戶／信用卡</label><select id="qAccount"></select></div>
+          <div id="qToWrap" class="field" style="display:none"><label>轉入帳戶</label><select id="qToAccount"></select></div>
+          <div class="field"><label>金額</label><input id="qAmount" type="number" min="0" step="1" inputmode="numeric" placeholder="少花點" required /></div>
+          <div id="categoryWrap" class="field"><label>分類</label><select id="qCategory"><option>餐飲</option><option>交通</option><option>生活</option><option>購物</option><option>娛樂</option><option>日用品</option><option>醫療</option><option>學校</option><option>保險</option><option>其他</option></select></div>
+          <div class="field"><label>備註</label><input id="qNote" placeholder="例如：別再花錢了~" /></div>
+          <div class="quick-bottom-row">
+            <label id="nextMonthWrap" class="next-month-option" style="display:none;">
+              <input type="checkbox" id="nextMonthCard" />
+              <span>此筆列入下月卡費</span>
+            </label>
+            <button type="submit" class="quick-save-btn">儲存</button>
+          </div>
+        </form>
+      </div>
+      <div class="card span12">
+        <div class="section-title"><h2>信用卡本月使用</h2><span id="cardMonthLabel"></span></div>
+        <div id="cardList" class="card-grid"></div>
+      </div>
+      <div class="card span12">
+        <div class="section-title"><h2>每月紀錄搜尋</h2><span id="txCount"></span></div>
+        <div class="searchbar" style="margin-bottom:10px"><input id="txSearch" type="search" placeholder="搜尋帳戶、分類或備註…" /><button class="secondary small" onclick="clearSearch()">清除搜尋</button></div>
+        <div class="table-wrap"><table><thead><tr><th>日期</th><th>類型</th><th>帳戶</th><th>分類</th><th>備註</th><th class="right">金額</th><th></th></tr></thead><tbody id="txBody"></tbody></table></div>
       </div>
     </div>
   </div>
 
-  <div id="bankModal" class="modal"><div class="modal-box"><div class="modal-head"><h3>銀行設定</h3><button class="close" onclick="closeModal('bankModal')">關閉</button></div><div id="bankSettings"></div><div style="margin-top:14px"><button onclick="addBank()">＋ 新增銀行</button></div></div></div>
-  <div id="cardModal" class="modal"><div class="modal-box"><div class="modal-head"><h3>信用卡設定</h3><button class="close" onclick="closeModal('cardModal')">關閉</button></div><div id="cardSettings"></div><div style="margin-top:14px"><button onclick="addCard()">＋ 新增信用卡</button></div></div></div>
-  <div id="toast" class="toast"></div>
+  <div id="overviewPage" class="app-page">
+    <div class="grid">
+      <div class="card kpi"><div class="privacy-row"><div class="label">銀行目前總額</div><button id="privacyBtn" class="secondary privacy-btn" onclick="toggleBankTotal()">顯示</button></div><div class="value masked" id="kBank">••••••</div><div class="sub">預設隱藏，可隨時切換</div></div>
+      <div class="card kpi"><div class="label">所選月份信用卡刷費</div><div class="value" id="kCard">$0</div><div class="sub" id="kCardSub">0 筆刷卡</div></div>
+      <div class="card kpi"><div class="label">所選月份收入</div><div class="value" id="kIncome">$0</div><div class="sub">依交易日期計算</div></div>
+      <div class="card kpi"><div class="label">所選月份現金支出</div><div class="value" id="kExpense">$0</div><div class="sub">不含信用卡刷費</div></div>
+      <div class="card span12">
+        <div class="section-title"><h2>各家銀行餘額</h2></div>
+        <div id="bankList" class="bank-grid"></div>
+      </div>
+    </div>
+  </div>
+  <div class="footer-note">主要資料儲存在 Supabase 雲端，同一帳號在手機、電腦與不同瀏覽器會讀取同一份紀錄；瀏覽器 LocalStorage 僅作為暫存與離線備援。建議仍定期匯出 Excel。</div>
+</div>
 
-  <script>
-  const KEY_PREFIX='finance-tracker-v2';
-  const PENDING_KEY_PREFIX='finance-tracker-pending-sync-v2';
-  const requiredBanks=[
-    {id:'esun',name:'玉山 (緊急)',initial:242471},
-    {id:'bot',name:'台灣 (學貸)',initial:26653},
-    {id:'first',name:'第一 (娛樂)',initial:21948},
-    {id:'ctbc-bank',name:'中信 (生活)',initial:0},
-    {id:'sinopac',name:'永豐 (預存)',initial:32439.4},
-    {id:'cathay-bank',name:'國泰 (零用)',initial:28877.6},
-    {id:'line-bank',name:'LINE BANK',initial:0}
-  ];
+<div id="authGate" class="auth-gate">
+  <div class="auth-box">
+    <h2>我的收支紀錄</h2>
+    <p>登入後即可跨手機、電腦同步同一份銀行與信用卡紀錄。</p>
+    <div id="configWarning" class="config-help" style="display:none">Supabase 連線設定未載入。請確認已部署此最新版 index.html。</div>
+    <div id="authForm">
+      <input id="authEmail" type="email" autocomplete="email" placeholder="Email" />
+      <input id="authPassword" type="password" autocomplete="current-password" placeholder="密碼（至少 6 碼）" />
+      <div class="auth-buttons"><button onclick="signInUser()">登入</button><button class="secondary" onclick="signUpUser()">第一次建立帳號</button></div>
+      <div id="authMessage" class="sync-note"></div>
+    </div>
+  </div>
+</div>
 
-  /* 舊帳號既有雲端資料不受影響。
-     全新帳號若雲端尚無資料，會從完全空白開始。 */
-  const seed={
-    banks:structuredClone(requiredBanks),
-    cards:[
-      {id:'cathay-card',name:'國泰信用卡',limit:20000},
-      {id:'ctbc-card',name:'中信信用卡',limit:50000},
-      {id:'fubon-card',name:'富邦信用卡',limit:20000}
-    ],
-    transactions:[]
-  };
-  function emptyAccountData(){
-    return {banks:[],cards:[],transactions:[]};
+<div id="bankModal" class="modal"><div class="modal-box"><div class="modal-head"><h3>銀行設定</h3><button class="close" onclick="closeModal('bankModal')">關閉</button></div><div id="bankSettings"></div><div style="margin-top:14px"><button onclick="addBank()">＋ 新增銀行</button></div></div></div>
+<div id="cardModal" class="modal"><div class="modal-box"><div class="modal-head"><h3>信用卡設定</h3><button class="close" onclick="closeModal('cardModal')">關閉</button></div><div id="cardSettings"></div><div style="margin-top:14px"><button onclick="addCard()">＋ 新增信用卡</button></div></div></div>
+<div id="editTxModal" class="modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>編輯紀錄</h3>
+      <button class="close" onclick="closeEditTx()">關閉</button>
+    </div>
+    <div class="edit-form-grid">
+      <div class="field"><label>類型</label><select id="eType">
+        <option value="card">信用卡刷費</option>
+        <option value="expense">銀行／現金支出</option>
+        <option value="income">收入</option>
+        <option value="cardpay">繳信用卡費</option>
+        <option value="transfer">帳戶轉帳</option>
+      </select></div>
+      <div class="field"><label>日期</label><input id="eDate" type="date"></div>
+      <div class="field"><label id="eAccountLabel">帳戶／信用卡</label><select id="eAccount"></select></div>
+      <div id="eToWrap" class="field" style="display:none"><label>轉入帳戶</label><select id="eToAccount"></select></div>
+      <div class="field"><label>金額</label><input id="eAmount" type="number" min="0" step="1" inputmode="numeric"></div>
+      <div id="eCategoryWrap" class="field"><label>分類</label><select id="eCategory">
+        <option>餐飲</option><option>交通</option><option>生活</option><option>購物</option><option>娛樂</option>
+        <option>日用品</option><option>醫療</option><option>學校</option><option>保險</option><option>其他</option>
+      </select></div>
+      <div class="field" style="grid-column:1/-1"><label>備註</label><input id="eNote" placeholder="備註"></div>
+      <label id="eNextMonthWrap" class="next-month-option" style="display:none;grid-column:1/-1">
+        <input type="checkbox" id="eNextMonthCard"><span>此筆列入下月卡費</span>
+      </label>
+    </div>
+    <div class="edit-actions">
+      <button class="secondary" onclick="closeEditTx()">取消</button>
+      <button onclick="saveEditedTx()">儲存修改</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const KEY_PREFIX='finance-tracker-v2';
+const PENDING_KEY_PREFIX='finance-tracker-pending-sync-v2';
+const requiredBanks=[
+  {id:'esun',name:'玉山 (緊急)',initial:242471},
+  {id:'bot',name:'台灣 (學貸)',initial:26653},
+  {id:'first',name:'第一 (娛樂)',initial:21948},
+  {id:'ctbc-bank',name:'中信 (生活)',initial:0},
+  {id:'sinopac',name:'永豐 (預存)',initial:32439.4},
+  {id:'cathay-bank',name:'國泰 (零用)',initial:28877.6},
+  {id:'line-bank',name:'LINE BANK',initial:0}
+];
+
+/* 舊帳號既有雲端資料不受影響。
+   全新帳號若雲端尚無資料，會從完全空白開始。 */
+const seed={
+  banks:structuredClone(requiredBanks),
+  cards:[
+    {id:'cathay-card',name:'國泰信用卡',limit:20000},
+    {id:'ctbc-card',name:'中信信用卡',limit:50000},
+    {id:'fubon-card',name:'富邦信用卡',limit:20000}
+  ],
+  transactions:[]
+};
+function emptyAccountData(){
+  return {banks:[],cards:[],transactions:[]};
+}
+
+const cfg=window.FINANCE_CONFIG||{};
+const configured=!!(
+  cfg.SUPABASE_URL &&
+  cfg.SUPABASE_PUBLISHABLE_KEY &&
+  !cfg.SUPABASE_URL.includes('YOUR_PROJECT_ID') &&
+  !cfg.SUPABASE_PUBLISHABLE_KEY.includes('YOUR_PUBLISHABLE_KEY')
+);
+const sb=configured
+  ? supabase.createClient(
+      cfg.SUPABASE_URL,
+      cfg.SUPABASE_PUBLISHABLE_KEY,
+      {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}
+    )
+  : null;
+
+let currentUser=null;
+let data=emptyAccountData();
+let selectedMonth=currentMonth();
+let saving=false;
+
+function currentMonth(){
+  return new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Taipei'}).slice(0,7)
+}
+function today(){
+  return new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Taipei'})
+}
+
+function migrate(v){
+  v=v&&typeof v==='object'?v:emptyAccountData();
+  v.cards=Array.isArray(v.cards)?v.cards:[];
+  v.transactions=Array.isArray(v.transactions)?v.transactions:[];
+  v.banks=Array.isArray(v.banks)?v.banks:[];
+  v.cards=v.cards.map(c=>({
+    ...c,
+    paidMonths:Array.isArray(c.paidMonths)?c.paidMonths:[]
+  }));
+  return v
+}
+
+/* 每個登入帳號使用不同 localStorage key，避免 A/B 帳號互相讀到快取。 */
+function userDataKey(userId=currentUser?.id){
+  return userId?`${KEY_PREFIX}:${userId}`:null;
+}
+function userPendingKey(userId=currentUser?.id){
+  return userId?`${PENDING_KEY_PREFIX}:${userId}`:null;
+}
+function hasUserLocal(userId=currentUser?.id){
+  const key=userDataKey(userId);
+  return !!(key&&localStorage.getItem(key));
+}
+function loadUserLocal(userId=currentUser?.id){
+  const key=userDataKey(userId);
+  if(!key)return emptyAccountData();
+  try{
+    const raw=localStorage.getItem(key);
+    if(!raw)return emptyAccountData();
+    return migrate(JSON.parse(raw));
+  }catch(e){
+    return emptyAccountData();
+  }
+}
+function cacheLocal(pending=false){
+  const key=userDataKey();
+  const pendingKey=userPendingKey();
+  if(!key||!pendingKey)return;
+  localStorage.setItem(key,JSON.stringify(data));
+  localStorage.setItem(pendingKey,pending?'1':'0');
+}
+function hasPendingLocal(userId=currentUser?.id){
+  const key=userPendingKey(userId);
+  return !!(key&&localStorage.getItem(key)==='1');
+}
+
+function setCloudState(state,text){
+  cloudStatus.textContent=text;
+  cloudDot.className='dot '+state
+}
+
+async function save(showMessage=false){
+  if(!currentUser||!sb){
+    if(showMessage)toast('目前未登入');
+    return
   }
 
-  const cfg=window.FINANCE_CONFIG||{};
-  const configured=!!(
-    cfg.SUPABASE_URL &&
-    cfg.SUPABASE_PUBLISHABLE_KEY &&
-    !cfg.SUPABASE_URL.includes('YOUR_PROJECT_ID') &&
-    !cfg.SUPABASE_PUBLISHABLE_KEY.includes('YOUR_PUBLISHABLE_KEY')
-  );
-  const sb=configured
-    ? supabase.createClient(
-        cfg.SUPABASE_URL,
-        cfg.SUPABASE_PUBLISHABLE_KEY,
-        {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}
-      )
-    : null;
+  cacheLocal(true);
+  render();
 
-  let currentUser=null;
-  let data=emptyAccountData();
-  let selectedMonth=currentMonth();
-  let saving=false;
+  if(saving)return;
+  saving=true;
+  setCloudState('sync','同步中…');
 
-  function currentMonth(){
-    return new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Taipei'}).slice(0,7)
-  }
-  function today(){
-    return new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Taipei'})
-  }
-
-  function migrate(v){
-    v=v&&typeof v==='object'?v:emptyAccountData();
-    v.cards=Array.isArray(v.cards)?v.cards:[];
-    v.transactions=Array.isArray(v.transactions)?v.transactions:[];
-    v.banks=Array.isArray(v.banks)?v.banks:[];
-    v.cards=v.cards.map(c=>({
-      ...c,
-      paidMonths:Array.isArray(c.paidMonths)?c.paidMonths:[]
-    }));
-    return v
-  }
-
-  /* 每個登入帳號使用不同 localStorage key，避免 A/B 帳號互相讀到快取。 */
-  function userDataKey(userId=currentUser?.id){
-    return userId?`${KEY_PREFIX}:${userId}`:null;
-  }
-  function userPendingKey(userId=currentUser?.id){
-    return userId?`${PENDING_KEY_PREFIX}:${userId}`:null;
-  }
-  function hasUserLocal(userId=currentUser?.id){
-    const key=userDataKey(userId);
-    return !!(key&&localStorage.getItem(key));
-  }
-  function loadUserLocal(userId=currentUser?.id){
-    const key=userDataKey(userId);
-    if(!key)return emptyAccountData();
-    try{
-      const raw=localStorage.getItem(key);
-      if(!raw)return emptyAccountData();
-      return migrate(JSON.parse(raw));
-    }catch(e){
-      return emptyAccountData();
-    }
-  }
-  function cacheLocal(pending=false){
-    const key=userDataKey();
-    const pendingKey=userPendingKey();
-    if(!key||!pendingKey)return;
-    localStorage.setItem(key,JSON.stringify(data));
-    localStorage.setItem(pendingKey,pending?'1':'0');
-  }
-  function hasPendingLocal(userId=currentUser?.id){
-    const key=userPendingKey(userId);
-    return !!(key&&localStorage.getItem(key)==='1');
-  }
-
-  function setCloudState(state,text){
-    cloudStatus.textContent=text;
-    cloudDot.className='dot '+state
-  }
-
-  async function save(showMessage=false){
-    if(!currentUser||!sb){
-      if(showMessage)toast('目前未登入');
-      return
-    }
-
-    cacheLocal(true);
-    render();
-
-    if(saving)return;
-    saving=true;
-    setCloudState('sync','同步中…');
-
-    try{
-      const {error}=await sb
-        .from('finance_data')
-        .upsert(
-          {user_id:currentUser.id,data,updated_at:new Date().toISOString()},
-          {onConflict:'user_id'}
-        );
-
-      if(error)throw error;
-
-      cacheLocal(false);
-      setCloudState('ok','雲端已同步');
-      if(showMessage)toast('已儲存並同步');
-    }catch(e){
-      console.error(e);
-      setCloudState('bad','同步失敗');
-      if(showMessage)toast('已存此帳號本機快取，雲端同步失敗');
-    }finally{
-      saving=false
-    }
-  }
-
-  async function loadCloud(){
-    if(!currentUser||!sb)return;
-
-    setCloudState('sync','讀取雲端…');
-
-    const {data:row,error}=await sb
+  try{
+    const {error}=await sb
       .from('finance_data')
-      .select('data,updated_at')
-      .eq('user_id',currentUser.id)
-      .maybeSingle();
+      .upsert(
+        {user_id:currentUser.id,data,updated_at:new Date().toISOString()},
+        {onConflict:'user_id'}
+      );
 
-    if(error){
-      setCloudState('bad','讀取失敗');
-      throw error
-    }
+    if(error)throw error;
 
-    /* 有雲端資料：以此帳號自己的雲端資料為主。
-       只有這個「同一帳號」自己有待同步快取時，才恢復它自己的本機資料。 */
-    if(row?.data){
-      if(hasPendingLocal(currentUser.id)&&hasUserLocal(currentUser.id)){
-        data=loadUserLocal(currentUser.id);
-        await save(false);
-      }else{
-        data=migrate(row.data);
-        cacheLocal(false);
-      }
-    }else{
-      /* 全新帳號：不再拿舊共用 localStorage 的資料。
-         若此 user_id 已有自己的本機離線資料才恢復，否則完全空白。 */
-      if(hasUserLocal(currentUser.id)){
-        data=loadUserLocal(currentUser.id);
-      }else{
-        data=emptyAccountData();
-      }
+    cacheLocal(false);
+    setCloudState('ok','雲端已同步');
+    if(showMessage)toast('已儲存並同步');
+  }catch(e){
+    console.error(e);
+    setCloudState('bad','同步失敗');
+    if(showMessage)toast('已存此帳號本機快取，雲端同步失敗');
+  }finally{
+    saving=false
+  }
+}
+
+async function loadCloud(){
+  if(!currentUser||!sb)return;
+
+  setCloudState('sync','讀取雲端…');
+
+  const {data:row,error}=await sb
+    .from('finance_data')
+    .select('data,updated_at')
+    .eq('user_id',currentUser.id)
+    .maybeSingle();
+
+  if(error){
+    setCloudState('bad','讀取失敗');
+    throw error
+  }
+
+  /* 有雲端資料：以此帳號自己的雲端資料為主。
+     只有這個「同一帳號」自己有待同步快取時，才恢復它自己的本機資料。 */
+  if(row?.data){
+    if(hasPendingLocal(currentUser.id)&&hasUserLocal(currentUser.id)){
+      data=loadUserLocal(currentUser.id);
       await save(false);
+    }else{
+      data=migrate(row.data);
+      cacheLocal(false);
     }
-
-    render();
-    setCloudState('ok','雲端已同步')
+  }else{
+    /* 全新帳號：不再拿舊共用 localStorage 的資料。
+       若此 user_id 已有自己的本機離線資料才恢復，否則完全空白。 */
+    if(hasUserLocal(currentUser.id)){
+      data=loadUserLocal(currentUser.id);
+    }else{
+      data=emptyAccountData();
+    }
+    await save(false);
   }
 
-  async function signInUser(){
-    if(!configured)return;
-    const email=authEmail.value.trim();
-    const password=authPassword.value;
+  render();
+  setCloudState('ok','雲端已同步')
+}
 
-    if(!email||!password){
-      authMessage.textContent='請輸入 Email 與密碼';
-      return
-    }
+async function signInUser(){
+  if(!configured)return;
+  const email=authEmail.value.trim();
+  const password=authPassword.value;
 
-    authMessage.textContent='登入中…';
-    const {error}=await sb.auth.signInWithPassword({email,password});
-    authMessage.textContent=error?('登入失敗：'+error.message):''
+  if(!email||!password){
+    authMessage.textContent='請輸入 Email 與密碼';
+    return
   }
 
-  async function signUpUser(){
-    if(!configured)return;
-    const email=authEmail.value.trim();
-    const password=authPassword.value;
+  authMessage.textContent='登入中…';
+  const {error}=await sb.auth.signInWithPassword({email,password});
+  authMessage.textContent=error?('登入失敗：'+error.message):''
+}
 
-    if(!email||password.length<6){
-      authMessage.textContent='請輸入 Email，密碼至少 6 碼';
-      return
-    }
+async function signUpUser(){
+  if(!configured)return;
+  const email=authEmail.value.trim();
+  const password=authPassword.value;
 
-    authMessage.textContent='建立帳號中…';
-    const {data:res,error}=await sb.auth.signUp({email,password});
-
-    if(error){
-      authMessage.textContent='建立失敗：'+error.message;
-      return
-    }
-
-    authMessage.textContent=res.session
-      ? '帳號建立完成，正在登入…'
-      : '帳號已建立。若 Supabase 啟用 Email 驗證，請先到信箱完成驗證再登入。'
+  if(!email||password.length<6){
+    authMessage.textContent='請輸入 Email，密碼至少 6 碼';
+    return
   }
 
-  async function signOutUser(){
-    if(!sb)return;
+  authMessage.textContent='建立帳號中…';
+  const {data:res,error}=await sb.auth.signUp({email,password});
 
-    await sb.auth.signOut();
-    currentUser=null;
+  if(error){
+    authMessage.textContent='建立失敗：'+error.message;
+    return
+  }
+
+  authMessage.textContent=res.session
+    ? '帳號建立完成，正在登入…'
+    : '帳號已建立。若 Supabase 啟用 Email 驗證，請先到信箱完成驗證再登入。'
+}
+
+async function signOutUser(){
+  if(!sb)return;
+
+  await sb.auth.signOut();
+  currentUser=null;
+  data=emptyAccountData();
+
+  accountEmail.textContent='';
+  accountChip.style.display='none';
+  resetAccountBtn.style.display='none';
+  logoutBtn.style.display='none';
+
+  authGate.classList.remove('hidden');
+  setCloudState('','未登入');
+  render();
+}
+
+/* 只清除目前登入帳號，不影響其他 Email。 */
+async function resetCurrentAccount(){
+  if(!currentUser)return;
+
+  const email=currentUser.email||'目前帳號';
+  const ok=confirm(
+    `確定要清空 ${email} 的所有收支、銀行與信用卡資料嗎？\n\n此動作不會影響其他登入帳號。`
+  );
+  if(!ok)return;
+
+  data=emptyAccountData();
+
+  const key=userDataKey(currentUser.id);
+  const pendingKey=userPendingKey(currentUser.id);
+  if(key)localStorage.removeItem(key);
+  if(pendingKey)localStorage.removeItem(pendingKey);
+
+  await save(false);
+  render();
+  toast('此帳號資料已清空');
+}
+
+async function applySession(session){
+  currentUser=session?.user||null;
+
+  if(currentUser){
+    accountEmail.textContent=currentUser.email||currentUser.id;
+    accountChip.style.display='inline-flex';
+    resetAccountBtn.style.display='inline-block';
+    logoutBtn.style.display='inline-block';
+    authGate.classList.add('hidden');
+
+    /* 切換帳號時先清空畫面記憶，再讀這個帳號自己的資料。 */
     data=emptyAccountData();
-
+    render();
+    await loadCloud();
+  }else{
+    data=emptyAccountData();
     accountEmail.textContent='';
     accountChip.style.display='none';
     resetAccountBtn.style.display='none';
     logoutBtn.style.display='none';
-
     authGate.classList.remove('hidden');
     setCloudState('','未登入');
     render();
   }
+}
 
-  /* 只清除目前登入帳號，不影響其他 Email。 */
-  async function resetCurrentAccount(){
-    if(!currentUser)return;
+async function bootstrap(){
+  qDate.value=today();
+  render();
 
-    const email=currentUser.email||'目前帳號';
-    const ok=confirm(
-      `確定要清空 ${email} 的所有收支、銀行與信用卡資料嗎？\n\n此動作不會影響其他登入帳號。`
-    );
-    if(!ok)return;
-
-    data=emptyAccountData();
-
-    const key=userDataKey(currentUser.id);
-    const pendingKey=userPendingKey(currentUser.id);
-    if(key)localStorage.removeItem(key);
-    if(pendingKey)localStorage.removeItem(pendingKey);
-
-    await save(false);
-    render();
-    toast('此帳號資料已清空');
+  if(!configured){
+    configWarning.style.display='block';
+    authForm.style.opacity='.45';
+    authForm.style.pointerEvents='none';
+    setCloudState('bad','待設定 Supabase');
+    return
   }
 
-  async function applySession(session){
-    currentUser=session?.user||null;
+  const {data:{session}}=await sb.auth.getSession();
+  await applySession(session);
 
-    if(currentUser){
-      accountEmail.textContent=currentUser.email||currentUser.id;
-      accountChip.style.display='inline-flex';
-      resetAccountBtn.style.display='inline-block';
-      logoutBtn.style.display='inline-block';
-      authGate.classList.add('hidden');
-
-      /* 切換帳號時先清空畫面記憶，再讀這個帳號自己的資料。 */
-      data=emptyAccountData();
-      render();
-      await loadCloud();
-    }else{
-      data=emptyAccountData();
-      accountEmail.textContent='';
-      accountChip.style.display='none';
-      resetAccountBtn.style.display='none';
-      logoutBtn.style.display='none';
-      authGate.classList.remove('hidden');
-      setCloudState('','未登入');
-      render();
-    }
-  }
-
-  async function bootstrap(){
-    qDate.value=today();
-    render();
-
-    if(!configured){
-      configWarning.style.display='block';
-      authForm.style.opacity='.45';
-      authForm.style.pointerEvents='none';
-      setCloudState('bad','待設定 Supabase');
-      return
-    }
-
-    const {data:{session}}=await sb.auth.getSession();
-    await applySession(session);
-
-    sb.auth.onAuthStateChange((_event,session)=>{
-      setTimeout(()=>applySession(session),0)
-    });
-
-    window.addEventListener('online',()=>{
-      if(currentUser&&hasPendingLocal(currentUser.id))save(false)
-    })
-  }
-  const money=n=>new Intl.NumberFormat('zh-TW',{style:'currency',currency:'TWD',maximumFractionDigits:0}).format(Number(n||0));
-  function bankBalance(id){
-    let b=data.banks.find(x=>x.id===id);
-    let v=Number(b?.initial||0);
-    for(const t of data.transactions){
-      const amount=Number(t.amount||0);
-      if(t.type==='transfer'){
-        if(t.accountId===id)v-=amount;
-        if(t.toAccountId===id)v+=amount;
-        continue;
-      }
-      if(t.accountId!==id)continue;
-      if(t.type==='income')v+=amount;
-      if(t.type==='expense'||t.type==='cardpay')v-=amount;
-    }
-    return v
-  }
-  function monthTx(type,month=selectedMonth){return data.transactions.filter(t=>t.type===type&&t.date?.slice(0,7)===month)}
-  function monthText(m){const [y,mo]=m.split('-');return `${y} 年 ${Number(mo)} 月`}
-  function cardUseMonth(t){
-    const month=(t.date||'').slice(0,7);
-    if(!month||!t.nextMonth)return month;
-    let [year,mon]=month.split('-').map(Number);
-    mon++;
-    if(mon>12){mon=1;year++;}
-    return `${year}-${String(mon).padStart(2,'0')}`;
-  }
-
-  let bankTotalVisible=localStorage.getItem('finance-bank-total-visible')==='1';
-  function showPage(page){
-   const record=page==='record';
-   recordPage.classList.toggle('active',record);overviewPage.classList.toggle('active',!record);
-   tabRecord.classList.toggle('active',record);tabOverview.classList.toggle('active',!record);
-   window.scrollTo({top:0,behavior:'smooth'});
-  }
-  function toggleBankTotal(){
-   bankTotalVisible=!bankTotalVisible;
-   localStorage.setItem('finance-bank-total-visible',bankTotalVisible?'1':'0');
-   render();
-  }
-
-  function render(){
-    monthPicker.value=selectedMonth;monthTitle.textContent=monthText(selectedMonth);cardMonthLabel.textContent=monthText(selectedMonth);
-    const bankTotal=data.banks.reduce((s,b)=>s+bankBalance(b.id),0),cardMonth=data.transactions.filter(t=>t.type==='card'&&cardUseMonth(t)===selectedMonth),cardTotal=cardMonth.reduce((s,t)=>s+Number(t.amount),0),income=monthTx('income').reduce((s,t)=>s+Number(t.amount),0),expense=monthTx('expense').reduce((s,t)=>s+Number(t.amount),0);
-    kBank.textContent=bankTotalVisible?money(bankTotal):'••••••';kBank.classList.toggle('masked',!bankTotalVisible);privacyBtn.textContent=bankTotalVisible?'隱藏':'顯示';kCard.textContent=money(cardTotal);kCardSub.textContent=`${cardMonth.length} 筆刷卡`;kIncome.textContent=money(income);kExpense.textContent=money(expense);
-    bankList.innerHTML=data.banks.map(b=>{
-      const balance=bankBalance(b.id);
-      const balanceClass=balance>=100000?'balance-high':balance<=20000?'balance-low':'balance-mid';
-      return `<div class="bank-item"><div><div class="name">${esc(b.name)}</div><div class="meta">初始 ${money(b.initial)}</div></div><div class="money ${balanceClass}">${money(balance)}</div></div>`;
-    }).join('')||'<div class="empty">尚未設定銀行</div>';
-    cardList.innerHTML=data.cards.map(c=>{
-      const cardTx=cardMonth.filter(t=>t.accountId===c.id);
-      const used=cardTx.reduce((sum,t)=>sum+Number(t.amount),0);
-      const pct=c.limit?Math.min(100,used/Number(c.limit)*100):0;
-      const isPaid=Array.isArray(c.paidMonths)&&c.paidMonths.includes(selectedMonth);
-      return `<div class="cc-box clickable" onclick="toggleCardDetail('${c.id}')">
-        <div class="cc-top">
-          <div>
-            <div class="name">${esc(c.name)}</div>
-            <div class="meta">額度 ${money(c.limit)}｜點擊查看明細</div>
-          </div>
-          <button
-            type="button"
-            class="card-paid-badge ${isPaid?'paid':''}"
-            onclick="event.stopPropagation();toggleCardPaid('${c.id}')"
-            title="點一下切換本月繳費狀態"
-          >${isPaid?'✓ 已繳費':'未繳'}</button>
-        </div>
-        <div class="money">${money(used)}</div><div class="bar"><i style="width:${pct}%"></i></div>
-        <div id="cardDetail-${c.id}" class="card-detail"></div>
-      </div>`;
-    }).join('')||'<div class="empty">尚未設定信用卡</div>';
-    renderTransactions();refreshAccounts();renderBankSettings();renderCardSettings();
-  }
-  async function toggleCardPaid(cardId){
-    const card=data.cards.find(c=>c.id===cardId);
-    if(!card)return;
-    if(!Array.isArray(card.paidMonths))card.paidMonths=[];
-    if(card.paidMonths.includes(selectedMonth)){
-      card.paidMonths=card.paidMonths.filter(m=>m!==selectedMonth);
-      await save(false);
-      toast('已改為本月未繳');
-    }else{
-      card.paidMonths.push(selectedMonth);
-      await save(false);
-      toast('已標記本月卡費為已繳費');
-    }
-  }
-
-  function toggleCardDetail(cardId){
-    const box=document.getElementById(`cardDetail-${cardId}`);
-    if(!box)return;
-    if(box.style.display==='block'){box.style.display='none';return;}
-    const rows=data.transactions.filter(t=>t.type==='card'&&t.accountId===cardId&&cardUseMonth(t)===selectedMonth).sort((a,b)=>(b.date+(b.createdAt||'')).localeCompare(a.date+(a.createdAt||'')));
-    if(!rows.length){box.innerHTML='<div class="empty">本月沒有刷卡紀錄</div>';box.style.display='block';return;}
-    const total=rows.reduce((sum,t)=>sum+Number(t.amount),0);
-    box.innerHTML=rows.map(t=>`<div class="card-detail-row"><div class="meta">${(t.date||'').slice(5).replace('-','/')}</div><div><div>${esc(t.note||t.category||'刷卡')}</div><div class="meta">${esc(t.category||'')}${t.nextMonth?'｜<span class="cross-month-tag">跨月</span>':''}</div></div><div class="money" style="font-size:15px">${money(t.amount)}</div></div>`).join('')+`<div class="card-detail-total"><span>本月合計</span><span>${money(total)}</span></div>`;
-    box.style.display='block';
-  }
-  function renderTransactions(){
-    const q=(txSearch.value||'').trim().toLowerCase();
-    const allAccounts=[...data.banks,...data.cards];
-    let rows=data.transactions
-      .filter(t=>t.date?.slice(0,7)===selectedMonth)
-      .filter(t=>{
-        if(!q)return true;
-        const from=allAccounts.find(a=>a.id===t.accountId)?.name||'';
-        const to=data.banks.find(a=>a.id===t.toAccountId)?.name||'';
-        return [from,to,t.category,t.note,t.date].some(v=>String(v||'').toLowerCase().includes(q))
-      })
-      .sort((a,b)=>(b.date+(b.createdAt||'')).localeCompare(a.date+(a.createdAt||'')));
-
-    txCount.textContent=`${monthText(selectedMonth)}共 ${rows.length} 筆`;
-    txBody.innerHTML=rows.map(t=>{
-      let typeMap={
-        card:['刷卡','expense'],
-        expense:['支出','expense'],
-        income:['收入','income'],
-        cardpay:['繳卡費','cardpay'],
-        transfer:['轉帳','transfer']
-      };
-      const from=allAccounts.find(a=>a.id===t.accountId)?.name||'—';
-      const to=data.banks.find(a=>a.id===t.toAccountId)?.name||'—';
-      const acct=t.type==='transfer'?`${from} → ${to}`:from;
-      const amountText=t.type==='transfer'?money(t.amount):(t.type==='income'?'+':'-')+money(t.amount);
-      const moneyClass=t.type==='income'?'pos':(t.type==='transfer'?'':'neg');
-      return `<tr><td>${t.date}</td><td><span class="pill ${typeMap[t.type]?.[1]||''}">${typeMap[t.type]?.[0]||t.type}</span></td><td>${esc(acct)}</td><td>${esc(t.category||'')}</td><td>${esc(t.note||'')}</td><td class="right money ${moneyClass}">${amountText}</td><td class="right"><button class="danger small" onclick="delTx('${t.id}')">刪除</button></td></tr>`
-    }).join('')||'<tr><td colspan="7" class="empty">這個月份沒有符合條件的紀錄。</td></tr>'
-  }
-  function refreshTransferTargets(){
-    if(qType.value!=='transfer')return;
-    const previous=qToAccount.value;
-    const targets=data.banks.filter(x=>x.id!==qAccount.value);
-    qToAccount.innerHTML=targets.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
-    if(previous&&targets.some(x=>x.id===previous))qToAccount.value=previous;
-  }
-
-  function refreshAccounts(){
-    const type=qType.value;
-    const isTransfer=type==='transfer';
-    const arr=(type==='card')?data.cards:data.banks;
-    const previous=qAccount.value;
-    qAccount.innerHTML=arr.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
-    if(previous&&arr.some(x=>x.id===previous))qAccount.value=previous;
-
-    qAccountLabel.textContent=isTransfer?'轉出帳戶':'帳戶／信用卡';
-    qToWrap.style.display=isTransfer?'block':'none';
-    categoryWrap.style.display=isTransfer?'none':'block';
-
-    nextMonthWrap.style.display=type==='card'?'flex':'none';
-    if(type!=='card')nextMonthCard.checked=false;
-    refreshTransferTargets();
-  }
-
-  qType.addEventListener('change',refreshAccounts);
-  qAccount.addEventListener('change',refreshTransferTargets);
-  monthPicker.addEventListener('change',()=>{if(monthPicker.value){selectedMonth=monthPicker.value;render()}});
-  txSearch.addEventListener('input',renderTransactions);
-  function moveMonth(delta){let [y,m]=selectedMonth.split('-').map(Number);m+=delta;if(m<1){m=12;y--}if(m>12){m=1;y++}selectedMonth=`${y}-${String(m).padStart(2,'0')}`;render()}
-  function goCurrentMonth(){selectedMonth=currentMonth();render()}function clearSearch(){txSearch.value='';renderTransactions()}
-  quickForm.addEventListener('submit',async e=>{
-    e.preventDefault();
-    const amount=Number(qAmount.value);
-    if(!amount||amount<=0)return toast('請輸入正確金額');
-
-    // 已結清防呆：依卡費歸屬月份判斷，已繳費就阻擋誤新增刷卡。
-    if(qType.value==='card'){
-      const card=data.cards.find(c=>c.id===qAccount.value);
-      const billingMonth=cardUseMonth({date:qDate.value,nextMonth:nextMonthCard.checked});
-      if(card&&Array.isArray(card.paidMonths)&&card.paidMonths.includes(billingMonth)){
-        toast('本月已結清');
-        return;
-      }
-    }
-
-    if(qType.value==='transfer'){
-      if(!qAccount.value||!qToAccount.value)return toast('請選擇轉出與轉入帳戶');
-      if(qAccount.value===qToAccount.value)return toast('轉出與轉入帳戶不可相同');
-    }
-
-    data.transactions.push({
-      id:crypto.randomUUID?crypto.randomUUID():Date.now().toString(),
-      type:qType.value,
-      date:qDate.value,
-      accountId:qAccount.value,
-      toAccountId:qType.value==='transfer'?qToAccount.value:null,
-      amount,
-      category:qType.value==='transfer'?'帳戶轉帳':qCategory.value,
-      note:qNote.value.trim(),
-      nextMonth:qType.value==='card'?nextMonthCard.checked:false,
-      createdAt:new Date().toISOString()
-    });
-    selectedMonth=qDate.value.slice(0,7);
-    qAmount.value='';
-    qNote.value='';
-    nextMonthCard.checked=false;
-    await save(true);
+  sb.auth.onAuthStateChange((_event,session)=>{
+    setTimeout(()=>applySession(session),0)
   });
-  async function delTx(id){if(confirm('確定刪除這筆紀錄？')){data.transactions=data.transactions.filter(t=>t.id!==id);await save(true)}}
-  function renderBankSettings(){bankSettings.innerHTML=data.banks.map((b,i)=>`<div class="form-grid" style="grid-template-columns:1fr 1fr;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #eee"><div class="field"><label>銀行名稱</label><input value="${attr(b.name)}" onchange="data.banks[${i}].name=this.value;save(true)"></div><div class="field"><label>初始餘額</label><input type="number" step="0.1" value="${b.initial}" onchange="data.banks[${i}].initial=Number(this.value);save(true)"></div><div style="grid-column:1/-1"><button class="danger small" onclick="removeBank('${b.id}')">刪除銀行</button></div></div>`).join('')}
-  function renderCardSettings(){cardSettings.innerHTML=data.cards.map((c,i)=>`<div class="form-grid" style="grid-template-columns:1fr 1fr;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #eee"><div class="field"><label>信用卡名稱</label><input value="${attr(c.name)}" onchange="data.cards[${i}].name=this.value;save(true)"></div><div class="field"><label>信用額度</label><input type="number" value="${c.limit}" onchange="data.cards[${i}].limit=Number(this.value);save(true)"></div><div style="grid-column:1/-1"><button class="danger small" onclick="removeCard('${c.id}')">刪除信用卡</button></div></div>`).join('')}
-  async function addBank(){data.banks.push({id:'bank-'+Date.now(),name:'新銀行',initial:0});await save(true)}async function addCard(){data.cards.push({id:'card-'+Date.now(),name:'新信用卡',limit:0,paidMonths:[]});await save(true)}
-  async function removeBank(id){if(data.transactions.some(t=>t.accountId===id))return toast('此銀行已有交易，請先刪除相關交易');data.banks=data.banks.filter(x=>x.id!==id);await save(true)}async function removeCard(id){if(data.transactions.some(t=>t.accountId===id))return toast('此信用卡已有交易，請先刪除相關交易');data.cards=data.cards.filter(x=>x.id!==id);await save(true)}
-  function openBankModal(){bankModal.classList.add('show')}function openCardModal(){cardModal.classList.add('show')}function closeModal(id){document.getElementById(id).classList.remove('show')}
-  function exportData(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`finance-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
-  function exportExcel(){
-    if(typeof XLSX==='undefined'){alert('Excel 匯出元件尚未載入，請確認目前有網路連線後再試。');return}
-    const allAccounts=[...data.banks,...data.cards];
-    const typeName={card:'信用卡刷費',expense:'銀行／現金支出',income:'收入',cardpay:'繳信用卡費',transfer:'帳戶轉帳'};
-    const tx=[...data.transactions].sort((a,b)=>a.date.localeCompare(b.date)).map(t=>({
-      '日期':t.date,
-      '交易月份':t.date.slice(0,7),
-      '卡費歸屬月份':t.type==='card'?cardUseMonth(t):'',
-      '類型':typeName[t.type]||t.type,
-      '帳戶／信用卡':allAccounts.find(a=>a.id===t.accountId)?.name||'',
-      '轉入帳戶':t.type==='transfer'?(data.banks.find(a=>a.id===t.toAccountId)?.name||''):'',
-      '分類':t.category||'',
-      '備註':t.note||'',
-      '金額':Number(t.amount)
-    }));
-    const banks=data.banks.map(b=>({'銀行':b.name,'初始餘額':Number(b.initial),'目前餘額':bankBalance(b.id)}));
-    const cardUsage=data.cards.map(c=>{
-      const used=data.transactions.filter(t=>t.type==='card'&&t.accountId===c.id&&cardUseMonth(t)===selectedMonth).reduce((s,t)=>s+Number(t.amount),0);
-      return {'月份':selectedMonth,'信用卡':c.name,'信用額度':Number(c.limit),'本月已刷':used,'額度使用率':c.limit?used/Number(c.limit):0}
-    });
-    const wb=XLSX.utils.book_new();
-    const wsTx=XLSX.utils.json_to_sheet(tx);
-    const wsBank=XLSX.utils.json_to_sheet(banks);
-    const wsCard=XLSX.utils.json_to_sheet(cardUsage);
-    wsTx['!cols']=[{wch:12},{wch:10},{wch:12},{wch:16},{wch:20},{wch:20},{wch:12},{wch:28},{wch:14}];
-    wsBank['!cols']=[{wch:20},{wch:16},{wch:16}];
-    wsCard['!cols']=[{wch:10},{wch:20},{wch:16},{wch:16},{wch:14}];
-    XLSX.utils.book_append_sheet(wb,wsTx,'全部收支明細');
-    XLSX.utils.book_append_sheet(wb,wsBank,'銀行餘額');
-    XLSX.utils.book_append_sheet(wb,wsCard,`${selectedMonth}信用卡`);
-    XLSX.writeFile(wb,`收支紀錄-${today()}.xlsx`);
-    toast('Excel 已匯出')
+
+  window.addEventListener('online',()=>{
+    if(currentUser&&hasPendingLocal(currentUser.id))save(false)
+  })
+}
+const money=n=>new Intl.NumberFormat('zh-TW',{style:'currency',currency:'TWD',maximumFractionDigits:0}).format(Number(n||0));
+function bankBalance(id){
+  let b=data.banks.find(x=>x.id===id);
+  let v=Number(b?.initial||0);
+  for(const t of data.transactions){
+    const amount=Number(t.amount||0);
+    if(t.type==='transfer'){
+      if(t.accountId===id)v-=amount;
+      if(t.toAccountId===id)v+=amount;
+      continue;
+    }
+    if(t.accountId!==id)continue;
+    if(t.type==='income')v+=amount;
+    if(t.type==='expense'||t.type==='cardpay')v-=amount;
   }
-  importFile.addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const parsed=JSON.parse(await f.text());if(!parsed.banks||!parsed.cards||!parsed.transactions)throw 0;data=migrate(parsed);await save(true);toast('備份已匯入並同步')}catch{alert('備份檔格式不正確')}e.target.value=''})
-  function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1800)}
-  function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}function attr(s=''){return esc(s)}
-  bootstrap();
-  </script>
+  return v
+}
+function monthTx(type,month=selectedMonth){return data.transactions.filter(t=>t.type===type&&t.date?.slice(0,7)===month)}
+function monthText(m){const [y,mo]=m.split('-');return `${y} 年 ${Number(mo)} 月`}
+function cardUseMonth(t){
+  const month=(t.date||'').slice(0,7);
+  if(!month||!t.nextMonth)return month;
+  let [year,mon]=month.split('-').map(Number);
+  mon++;
+  if(mon>12){mon=1;year++;}
+  return `${year}-${String(mon).padStart(2,'0')}`;
+}
 
-  <script>
-  /* 手機版禁止雙指縮放與雙擊縮放 */
-  (function () {
-    document.addEventListener('gesturestart', e => e.preventDefault(), {passive:false});
-    document.addEventListener('gesturechange', e => e.preventDefault(), {passive:false});
-    document.addEventListener('gestureend', e => e.preventDefault(), {passive:false});
+let bankTotalVisible=localStorage.getItem('finance-bank-total-visible')==='1';
+function showPage(page){
+ const record=page==='record';
+ recordPage.classList.toggle('active',record);overviewPage.classList.toggle('active',!record);
+ tabRecord.classList.toggle('active',record);tabOverview.classList.toggle('active',!record);
+ window.scrollTo({top:0,behavior:'smooth'});
+}
+function toggleBankTotal(){
+ bankTotalVisible=!bankTotalVisible;
+ localStorage.setItem('finance-bank-total-visible',bankTotalVisible?'1':'0');
+ render();
+}
 
-    document.addEventListener('touchmove', function(e){
-      if (e.touches && e.touches.length > 1) e.preventDefault();
-    }, {passive:false});
+function render(){
+  monthPicker.value=selectedMonth;monthTitle.textContent=monthText(selectedMonth);cardMonthLabel.textContent=monthText(selectedMonth);
+  const bankTotal=data.banks.reduce((s,b)=>s+bankBalance(b.id),0),cardMonth=data.transactions.filter(t=>t.type==='card'&&cardUseMonth(t)===selectedMonth),cardTotal=cardMonth.reduce((s,t)=>s+Number(t.amount),0),income=monthTx('income').reduce((s,t)=>s+Number(t.amount),0),expense=monthTx('expense').reduce((s,t)=>s+Number(t.amount),0);
+  kBank.textContent=bankTotalVisible?money(bankTotal):'••••••';kBank.classList.toggle('masked',!bankTotalVisible);privacyBtn.textContent=bankTotalVisible?'隱藏':'顯示';kCard.textContent=money(cardTotal);kCardSub.textContent=`${cardMonth.length} 筆刷卡`;kIncome.textContent=money(income);kExpense.textContent=money(expense);
+  bankList.innerHTML=data.banks.map(b=>{
+    const balance=bankBalance(b.id);
+    const balanceClass=balance>=100000?'balance-high':balance<=20000?'balance-low':'balance-mid';
+    return `<div class="bank-item"><div><div class="name">${esc(b.name)}</div><div class="meta">初始 ${money(b.initial)}</div></div><div class="money ${balanceClass}">${money(balance)}</div></div>`;
+  }).join('')||'<div class="empty">尚未設定銀行</div>';
+  cardList.innerHTML=data.cards.map(c=>{
+    const cardTx=cardMonth.filter(t=>t.accountId===c.id);
+    const used=cardTx.reduce((sum,t)=>sum+Number(t.amount),0);
+    const pct=c.limit?Math.min(100,used/Number(c.limit)*100):0;
+    const isPaid=Array.isArray(c.paidMonths)&&c.paidMonths.includes(selectedMonth);
+    return `<div class="cc-box clickable" onclick="toggleCardDetail('${c.id}')">
+      <div class="cc-top">
+        <div>
+          <div class="name">${esc(c.name)}</div>
+          <div class="meta">額度 ${money(c.limit)}｜點擊查看明細</div>
+        </div>
+        <button
+          type="button"
+          class="card-paid-badge ${isPaid?'paid':''}"
+          onclick="event.stopPropagation();toggleCardPaid('${c.id}')"
+          title="點一下切換本月繳費狀態"
+        >${isPaid?'✓ 已繳費':'未繳'}</button>
+      </div>
+      <div class="money">${money(used)}</div><div class="bar"><i style="width:${pct}%"></i></div>
+      <div id="cardDetail-${c.id}" class="card-detail"></div>
+    </div>`;
+  }).join('')||'<div class="empty">尚未設定信用卡</div>';
+  renderTransactions();refreshAccounts();renderBankSettings();renderCardSettings();
+}
+async function toggleCardPaid(cardId){
+  const card=data.cards.find(c=>c.id===cardId);
+  if(!card)return;
+  if(!Array.isArray(card.paidMonths))card.paidMonths=[];
+  if(card.paidMonths.includes(selectedMonth)){
+    card.paidMonths=card.paidMonths.filter(m=>m!==selectedMonth);
+    await save(false);
+    toast('已改為本月未繳');
+  }else{
+    card.paidMonths.push(selectedMonth);
+    await save(false);
+    toast('已標記本月卡費為已繳費');
+  }
+}
 
-    let lastTouchEnd = 0;
-    document.addEventListener('touchend', function(e){
-      const now = Date.now();
-      if (now - lastTouchEnd <= 300) e.preventDefault();
-      lastTouchEnd = now;
-    }, {passive:false});
-  })();
-  </script>
+function toggleCardDetail(cardId){
+  const box=document.getElementById(`cardDetail-${cardId}`);
+  if(!box)return;
+  if(box.style.display==='block'){box.style.display='none';return;}
+  const rows=data.transactions.filter(t=>t.type==='card'&&t.accountId===cardId&&cardUseMonth(t)===selectedMonth).sort((a,b)=>(b.date+(b.createdAt||'')).localeCompare(a.date+(a.createdAt||'')));
+  if(!rows.length){box.innerHTML='<div class="empty">本月沒有刷卡紀錄</div>';box.style.display='block';return;}
+  const total=rows.reduce((sum,t)=>sum+Number(t.amount),0);
+  box.innerHTML=rows.map(t=>`<div class="card-detail-row"><div class="meta">${(t.date||'').slice(5).replace('-','/')}</div><div><div>${esc(t.note||t.category||'刷卡')}</div><div class="meta">${esc(t.category||'')}${t.nextMonth?'｜<span class="cross-month-tag">跨月</span>':''}</div></div><div class="money" style="font-size:15px">${money(t.amount)}</div></div>`).join('')+`<div class="card-detail-total"><span>本月合計</span><span>${money(total)}</span></div>`;
+  box.style.display='block';
+}
+function renderTransactions(){
+  const q=(txSearch.value||'').trim().toLowerCase();
+  const allAccounts=[...data.banks,...data.cards];
+  let rows=data.transactions
+    .filter(t=>t.date?.slice(0,7)===selectedMonth)
+    .filter(t=>{
+      if(!q)return true;
+      const from=allAccounts.find(a=>a.id===t.accountId)?.name||'';
+      const to=data.banks.find(a=>a.id===t.toAccountId)?.name||'';
+      return [from,to,t.category,t.note,t.date].some(v=>String(v||'').toLowerCase().includes(q))
+    })
+    .sort((a,b)=>(b.date+(b.createdAt||'')).localeCompare(a.date+(a.createdAt||'')));
 
-  </body>
-  </html>
+  txCount.textContent=`${monthText(selectedMonth)}共 ${rows.length} 筆`;
+  txBody.innerHTML=rows.map(t=>{
+    let typeMap={
+      card:['刷卡','expense'],
+      expense:['支出','expense'],
+      income:['收入','income'],
+      cardpay:['繳卡費','cardpay'],
+      transfer:['轉帳','transfer']
+    };
+    const from=allAccounts.find(a=>a.id===t.accountId)?.name||'—';
+    const to=data.banks.find(a=>a.id===t.toAccountId)?.name||'—';
+    const acct=t.type==='transfer'?`${from} → ${to}`:from;
+    const amountText=t.type==='transfer'?money(t.amount):(t.type==='income'?'+':'-')+money(t.amount);
+    const moneyClass=t.type==='income'?'pos':(t.type==='transfer'?'':'neg');
+    return `<tr><td>${t.date}</td><td><span class="pill ${typeMap[t.type]?.[1]||''}">${typeMap[t.type]?.[0]||t.type}</span></td><td>${esc(acct)}</td><td>${esc(t.category||'')}</td><td>${esc(t.note||'')}</td><td class="right money ${moneyClass}">${amountText}</td><td class="right" style="white-space:nowrap"><button class="secondary small" onclick="openEditTx('${t.id}')">編輯</button> <button class="danger small" onclick="delTx('${t.id}')">刪除</button></td></tr>`
+  }).join('')||'<tr><td colspan="7" class="empty">這個月份沒有符合條件的紀錄。</td></tr>'
+}
+function refreshTransferTargets(){
+  if(qType.value!=='transfer')return;
+  const previous=qToAccount.value;
+  const targets=data.banks.filter(x=>x.id!==qAccount.value);
+  qToAccount.innerHTML=targets.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
+  if(previous&&targets.some(x=>x.id===previous))qToAccount.value=previous;
+}
+
+function refreshAccounts(){
+  const type=qType.value;
+  const isTransfer=type==='transfer';
+  const arr=(type==='card')?data.cards:data.banks;
+  const previous=qAccount.value;
+  qAccount.innerHTML=arr.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
+  if(previous&&arr.some(x=>x.id===previous))qAccount.value=previous;
+
+  qAccountLabel.textContent=isTransfer?'轉出帳戶':'帳戶／信用卡';
+  qToWrap.style.display=isTransfer?'block':'none';
+  categoryWrap.style.display=isTransfer?'none':'block';
+
+  nextMonthWrap.style.display=type==='card'?'flex':'none';
+  if(type!=='card')nextMonthCard.checked=false;
+  refreshTransferTargets();
+}
+
+qType.addEventListener('change',refreshAccounts);
+qAccount.addEventListener('change',refreshTransferTargets);
+monthPicker.addEventListener('change',()=>{if(monthPicker.value){selectedMonth=monthPicker.value;render()}});
+txSearch.addEventListener('input',renderTransactions);
+function moveMonth(delta){let [y,m]=selectedMonth.split('-').map(Number);m+=delta;if(m<1){m=12;y--}if(m>12){m=1;y++}selectedMonth=`${y}-${String(m).padStart(2,'0')}`;render()}
+function goCurrentMonth(){selectedMonth=currentMonth();render()}function clearSearch(){txSearch.value='';renderTransactions()}
+quickForm.addEventListener('submit',async e=>{
+  e.preventDefault();
+  const amount=Number(qAmount.value);
+  if(!amount||amount<=0)return toast('請輸入正確金額');
+
+  // 已結清防呆：依卡費歸屬月份判斷，已繳費就阻擋誤新增刷卡。
+  if(qType.value==='card'){
+    const card=data.cards.find(c=>c.id===qAccount.value);
+    const billingMonth=cardUseMonth({date:qDate.value,nextMonth:nextMonthCard.checked});
+    if(card&&Array.isArray(card.paidMonths)&&card.paidMonths.includes(billingMonth)){
+      toast('本月已結清');
+      return;
+    }
+  }
+
+  if(qType.value==='transfer'){
+    if(!qAccount.value||!qToAccount.value)return toast('請選擇轉出與轉入帳戶');
+    if(qAccount.value===qToAccount.value)return toast('轉出與轉入帳戶不可相同');
+  }
+
+  data.transactions.push({
+    id:crypto.randomUUID?crypto.randomUUID():Date.now().toString(),
+    type:qType.value,
+    date:qDate.value,
+    accountId:qAccount.value,
+    toAccountId:qType.value==='transfer'?qToAccount.value:null,
+    amount,
+    category:qType.value==='transfer'?'帳戶轉帳':qCategory.value,
+    note:qNote.value.trim(),
+    nextMonth:qType.value==='card'?nextMonthCard.checked:false,
+    createdAt:new Date().toISOString()
+  });
+  selectedMonth=qDate.value.slice(0,7);
+  qAmount.value='';
+  qNote.value='';
+  nextMonthCard.checked=false;
+  await save(true);
+});
+
+let editingTxId=null;
+
+function refreshEditTransferTargets(){
+  if(eType.value!=='transfer')return;
+  const previous=eToAccount.value;
+  const targets=data.banks.filter(x=>x.id!==eAccount.value);
+  eToAccount.innerHTML=targets.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
+  if(previous&&targets.some(x=>x.id===previous))eToAccount.value=previous;
+}
+
+function refreshEditAccounts(){
+  const type=eType.value;
+  const isTransfer=type==='transfer';
+  const arr=type==='card'?data.cards:data.banks;
+  const previous=eAccount.value;
+
+  eAccount.innerHTML=arr.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
+  if(previous&&arr.some(x=>x.id===previous))eAccount.value=previous;
+
+  eAccountLabel.textContent=isTransfer?'轉出帳戶':'帳戶／信用卡';
+  eToWrap.style.display=isTransfer?'block':'none';
+  eCategoryWrap.style.display=isTransfer?'none':'block';
+  eNextMonthWrap.style.display=type==='card'?'flex':'none';
+
+  if(type!=='card')eNextMonthCard.checked=false;
+  refreshEditTransferTargets();
+}
+
+function openEditTx(id){
+  const tx=data.transactions.find(t=>t.id===id);
+  if(!tx)return;
+
+  editingTxId=id;
+  eType.value=tx.type;
+  refreshEditAccounts();
+
+  eDate.value=tx.date||'';
+  eAmount.value=tx.amount||'';
+  eNote.value=tx.note||'';
+  eNextMonthCard.checked=!!tx.nextMonth;
+
+  if([...data.banks,...data.cards].some(x=>x.id===tx.accountId)){
+    eAccount.value=tx.accountId;
+  }
+
+  refreshEditTransferTargets();
+
+  if(tx.type==='transfer'&&data.banks.some(x=>x.id===tx.toAccountId)){
+    eToAccount.value=tx.toAccountId;
+  }
+
+  const category=tx.category||'其他';
+  eCategory.value=[...eCategory.options].some(o=>o.value===category)?category:'其他';
+
+  editTxModal.classList.add('show');
+}
+
+function closeEditTx(){
+  editTxModal.classList.remove('show');
+  editingTxId=null;
+}
+
+async function saveEditedTx(){
+  if(!editingTxId)return;
+
+  const index=data.transactions.findIndex(t=>t.id===editingTxId);
+  if(index<0)return;
+
+  const oldTx=data.transactions[index];
+  const amount=Number(eAmount.value);
+
+  if(!eDate.value)return toast('請選擇日期');
+  if(!amount||amount<=0)return toast('請輸入正確金額');
+  if(!eAccount.value)return toast('請選擇帳戶');
+
+  if(eType.value==='transfer'){
+    if(!eToAccount.value)return toast('請選擇轉入帳戶');
+    if(eAccount.value===eToAccount.value)return toast('轉出與轉入帳戶不可相同');
+  }
+
+  if(eType.value==='card'){
+    const targetCard=data.cards.find(c=>c.id===eAccount.value);
+    const targetMonth=cardUseMonth({
+      date:eDate.value,
+      nextMonth:eNextMonthCard.checked
+    });
+
+    const oldMonth=oldTx.type==='card'?cardUseMonth(oldTx):null;
+    const sameOriginalBucket=
+      oldTx.type==='card' &&
+      oldTx.accountId===eAccount.value &&
+      oldMonth===targetMonth;
+
+    if(
+      !sameOriginalBucket &&
+      targetCard &&
+      Array.isArray(targetCard.paidMonths) &&
+      targetCard.paidMonths.includes(targetMonth)
+    ){
+      toast('本月已結清');
+      return;
+    }
+  }
+
+  data.transactions[index]={
+    ...oldTx,
+    type:eType.value,
+    date:eDate.value,
+    accountId:eAccount.value,
+    toAccountId:eType.value==='transfer'?eToAccount.value:null,
+    amount,
+    category:eType.value==='transfer'?'帳戶轉帳':eCategory.value,
+    note:eNote.value.trim(),
+    nextMonth:eType.value==='card'?eNextMonthCard.checked:false,
+    updatedAt:new Date().toISOString()
+  };
+
+  selectedMonth=eDate.value.slice(0,7);
+  closeEditTx();
+  await save(true);
+}
+
+eType.addEventListener('change',refreshEditAccounts);
+eAccount.addEventListener('change',refreshEditTransferTargets);
+
+async function delTx(id){if(confirm('確定刪除這筆紀錄？')){data.transactions=data.transactions.filter(t=>t.id!==id);await save(true)}}
+function renderBankSettings(){bankSettings.innerHTML=data.banks.map((b,i)=>`<div class="form-grid" style="grid-template-columns:1fr 1fr;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #eee"><div class="field"><label>銀行名稱</label><input value="${attr(b.name)}" onchange="data.banks[${i}].name=this.value;save(true)"></div><div class="field"><label>初始餘額</label><input type="number" step="0.1" value="${b.initial}" onchange="data.banks[${i}].initial=Number(this.value);save(true)"></div><div style="grid-column:1/-1"><button class="danger small" onclick="removeBank('${b.id}')">刪除銀行</button></div></div>`).join('')}
+function renderCardSettings(){cardSettings.innerHTML=data.cards.map((c,i)=>`<div class="form-grid" style="grid-template-columns:1fr 1fr;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #eee"><div class="field"><label>信用卡名稱</label><input value="${attr(c.name)}" onchange="data.cards[${i}].name=this.value;save(true)"></div><div class="field"><label>信用額度</label><input type="number" value="${c.limit}" onchange="data.cards[${i}].limit=Number(this.value);save(true)"></div><div style="grid-column:1/-1"><button class="danger small" onclick="removeCard('${c.id}')">刪除信用卡</button></div></div>`).join('')}
+async function addBank(){data.banks.push({id:'bank-'+Date.now(),name:'新銀行',initial:0});await save(true)}async function addCard(){data.cards.push({id:'card-'+Date.now(),name:'新信用卡',limit:0,paidMonths:[]});await save(true)}
+async function removeBank(id){if(data.transactions.some(t=>t.accountId===id))return toast('此銀行已有交易，請先刪除相關交易');data.banks=data.banks.filter(x=>x.id!==id);await save(true)}async function removeCard(id){if(data.transactions.some(t=>t.accountId===id))return toast('此信用卡已有交易，請先刪除相關交易');data.cards=data.cards.filter(x=>x.id!==id);await save(true)}
+function openBankModal(){bankModal.classList.add('show')}function openCardModal(){cardModal.classList.add('show')}function closeModal(id){document.getElementById(id).classList.remove('show')}
+function exportData(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`finance-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
+function exportExcel(){
+  if(typeof XLSX==='undefined'){alert('Excel 匯出元件尚未載入，請確認目前有網路連線後再試。');return}
+  const allAccounts=[...data.banks,...data.cards];
+  const typeName={card:'信用卡刷費',expense:'銀行／現金支出',income:'收入',cardpay:'繳信用卡費',transfer:'帳戶轉帳'};
+  const tx=[...data.transactions].sort((a,b)=>a.date.localeCompare(b.date)).map(t=>({
+    '日期':t.date,
+    '交易月份':t.date.slice(0,7),
+    '卡費歸屬月份':t.type==='card'?cardUseMonth(t):'',
+    '類型':typeName[t.type]||t.type,
+    '帳戶／信用卡':allAccounts.find(a=>a.id===t.accountId)?.name||'',
+    '轉入帳戶':t.type==='transfer'?(data.banks.find(a=>a.id===t.toAccountId)?.name||''):'',
+    '分類':t.category||'',
+    '備註':t.note||'',
+    '金額':Number(t.amount)
+  }));
+  const banks=data.banks.map(b=>({'銀行':b.name,'初始餘額':Number(b.initial),'目前餘額':bankBalance(b.id)}));
+  const cardUsage=data.cards.map(c=>{
+    const used=data.transactions.filter(t=>t.type==='card'&&t.accountId===c.id&&cardUseMonth(t)===selectedMonth).reduce((s,t)=>s+Number(t.amount),0);
+    return {'月份':selectedMonth,'信用卡':c.name,'信用額度':Number(c.limit),'本月已刷':used,'額度使用率':c.limit?used/Number(c.limit):0}
+  });
+  const wb=XLSX.utils.book_new();
+  const wsTx=XLSX.utils.json_to_sheet(tx);
+  const wsBank=XLSX.utils.json_to_sheet(banks);
+  const wsCard=XLSX.utils.json_to_sheet(cardUsage);
+  wsTx['!cols']=[{wch:12},{wch:10},{wch:12},{wch:16},{wch:20},{wch:20},{wch:12},{wch:28},{wch:14}];
+  wsBank['!cols']=[{wch:20},{wch:16},{wch:16}];
+  wsCard['!cols']=[{wch:10},{wch:20},{wch:16},{wch:16},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,wsTx,'全部收支明細');
+  XLSX.utils.book_append_sheet(wb,wsBank,'銀行餘額');
+  XLSX.utils.book_append_sheet(wb,wsCard,`${selectedMonth}信用卡`);
+  XLSX.writeFile(wb,`收支紀錄-${today()}.xlsx`);
+  toast('Excel 已匯出')
+}
+importFile.addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const parsed=JSON.parse(await f.text());if(!parsed.banks||!parsed.cards||!parsed.transactions)throw 0;data=migrate(parsed);await save(true);toast('備份已匯入並同步')}catch{alert('備份檔格式不正確')}e.target.value=''})
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1800)}
+function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}function attr(s=''){return esc(s)}
+bootstrap();
+</script>
+
+<script>
+/* 手機版禁止雙指縮放與雙擊縮放 */
+(function () {
+  document.addEventListener('gesturestart', e => e.preventDefault(), {passive:false});
+  document.addEventListener('gesturechange', e => e.preventDefault(), {passive:false});
+  document.addEventListener('gestureend', e => e.preventDefault(), {passive:false});
+
+  document.addEventListener('touchmove', function(e){
+    if (e.touches && e.touches.length > 1) e.preventDefault();
+  }, {passive:false});
+
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', function(e){
+    const now = Date.now();
+    if (now - lastTouchEnd <= 300) e.preventDefault();
+    lastTouchEnd = now;
+  }, {passive:false});
+})();
+</script>
+
+</body>
+</html>
