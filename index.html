@@ -780,7 +780,7 @@ function render(){
       <div class="cc-top">
         <div>
           <div class="name">${esc(c.name)}</div>
-          <div class="meta">額度 ${money(c.limit)}｜點擊查看明細</div>
+          <div class="meta">剩餘額度 ${money(Math.max(0, Number(c.limit||0) - used))}｜點擊查看明細</div>
         </div>
         <button
           type="button"
