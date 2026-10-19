@@ -285,6 +285,54 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
   .edit-form-grid{grid-template-columns:1fr}
   .edit-actions button{flex:1}
 }
+
+/* ===== 資金總覽 KPI 可點擊明細 ===== */
+.kpi-clickable{
+  cursor:pointer;
+  transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease;
+}
+.kpi-clickable:hover{
+  transform:translateY(-1px);
+  box-shadow:0 12px 32px rgba(17,24,39,.10);
+  border-color:#d1d5db;
+}
+.kpi-clickable:active{transform:none}
+.overview-detail-list{margin-top:4px}
+.overview-detail-row{
+  display:grid;
+  grid-template-columns:92px 1fr auto;
+  gap:10px;
+  align-items:center;
+  padding:11px 0;
+  border-bottom:1px solid var(--line);
+}
+.overview-detail-row:last-child{border-bottom:0}
+.overview-detail-main{min-width:0}
+.overview-detail-title{font-weight:750}
+.overview-detail-meta{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.45}
+.overview-detail-amount{font-weight:800;text-align:right;white-space:nowrap}
+.overview-detail-total{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  margin-top:12px;
+  padding-top:12px;
+  border-top:1px solid var(--line);
+  font-weight:800;
+}
+.card-summary-row{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:12px;
+  align-items:center;
+  padding:13px 0;
+  border-bottom:1px solid var(--line);
+}
+.card-summary-row:last-child{border-bottom:0}
+@media(max-width:620px){
+  .overview-detail-row{grid-template-columns:70px 1fr auto;gap:8px}
+}
+
 </style>
 </head>
 <body>
@@ -353,8 +401,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
         <div class="month-controls"><button class="secondary small" onclick="moveMonth(-1)">← 上月</button><input id="overviewMonthPicker" type="month" /><button class="secondary small" onclick="moveMonth(1)">下月 →</button><button class="secondary small" onclick="goCurrentMonth()">回本月</button></div>
       </div>
       <div class="card kpi"><div class="privacy-row"><div class="label">所選月份銀行總額</div><button id="privacyBtn" class="secondary privacy-btn" onclick="toggleBankTotal()">顯示</button></div><div class="value masked" id="kBank">••••••</div><div class="sub" id="kBankSub">月底餘額</div></div>
-      <div class="card kpi"><div class="label">所選月份信用卡刷費</div><div class="value" id="kCard">$0</div><div class="sub" id="kCardSub">0 筆刷卡</div></div>
-      <div class="card kpi"><div class="label">所選月份收入</div><div class="value" id="kIncome">$0</div><div class="sub">依交易日期計算</div></div>
+      <div class="card kpi kpi-clickable" onclick="openOverviewDetail('card')" title="點擊查看各張信用卡總刷費"><div class="label">所選月份信用卡刷費</div><div class="value" id="kCard">$0</div><div class="sub" id="kCardSub">點擊查看各卡合計</div></div>
+      <div class="card kpi kpi-clickable" onclick="openOverviewDetail('income')" title="點擊查看收入明細"><div class="label">所選月份收入</div><div class="value" id="kIncome">$0</div><div class="sub" id="kIncomeSub">點擊查看明細</div></div>
       <div class="card kpi"><div class="label">所選月份現金支出</div><div class="value" id="kExpense">$0</div><div class="sub">不含信用卡刷費</div></div>
       <div class="card span12">
         <div class="section-title"><h2>各家銀行月底餘額</h2><span id="bankBalanceMonthLabel"></span></div>
@@ -376,6 +424,17 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
       <div class="auth-buttons"><button onclick="signInUser()">登入</button><button class="secondary" onclick="signUpUser()">第一次建立帳號</button></div>
       <div id="authMessage" class="sync-note"></div>
     </div>
+  </div>
+</div>
+
+
+<div id="overviewDetailModal" class="modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="overviewDetailTitle">明細</h3>
+      <button class="close" onclick="closeOverviewDetail()">關閉</button>
+    </div>
+    <div id="overviewDetailBody"></div>
   </div>
 </div>
 
@@ -794,7 +853,7 @@ function render(){
   if(typeof kBankSub!=='undefined'&&kBankSub)kBankSub.textContent=`截至 ${monthText(selectedMonth)}月底`;
 
   const bankTotal=data.banks.reduce((s,b)=>s+bankBalanceAtMonth(b.id,selectedMonth),0),cardMonth=data.transactions.filter(t=>t.type==='card'&&cardUseMonth(t)===selectedMonth),cardTotal=cardMonth.reduce((s,t)=>s+Number(t.amount),0),income=monthTx('income').reduce((s,t)=>s+Number(t.amount),0),expense=monthTx('expense').reduce((s,t)=>s+Number(t.amount),0);
-  kBank.textContent=bankTotalVisible?money(bankTotal):'••••••';kBank.classList.toggle('masked',!bankTotalVisible);privacyBtn.textContent=bankTotalVisible?'隱藏':'顯示';kCard.textContent=money(cardTotal);kCardSub.textContent=`${cardMonth.length} 筆刷卡`;kIncome.textContent=money(income);kExpense.textContent=money(expense);
+  kBank.textContent=bankTotalVisible?money(bankTotal):'••••••';kBank.classList.toggle('masked',!bankTotalVisible);privacyBtn.textContent=bankTotalVisible?'隱藏':'顯示';kCard.textContent=money(cardTotal);kCardSub.textContent=`${cardMonth.length} 筆刷卡｜點擊看各卡`;kIncome.textContent=money(income);if(typeof kIncomeSub!=='undefined'&&kIncomeSub)kIncomeSub.textContent=`${monthTx('income').length} 筆｜點擊查看明細`;kExpense.textContent=money(expense);
   bankList.innerHTML=data.banks.map(b=>{
     const balance=bankBalanceAtMonth(b.id,selectedMonth);
     const balanceClass=balance>=100000?'balance-high':balance<=20000?'balance-low':'balance-mid';
@@ -824,6 +883,87 @@ function render(){
   }).join('')||'<div class="empty">尚未設定信用卡</div>';
   renderTransactions();refreshAccounts();renderBankSettings();renderCardSettings();
 }
+
+function openOverviewDetail(type){
+  const modal=document.getElementById('overviewDetailModal');
+  const title=document.getElementById('overviewDetailTitle');
+  const body=document.getElementById('overviewDetailBody');
+  if(!modal||!title||!body)return;
+
+  if(type==='income'){
+    const rows=data.transactions
+      .filter(t=>t.type==='income'&&t.date?.slice(0,7)===selectedMonth)
+      .sort((a,b)=>(b.date+(b.createdAt||'')).localeCompare(a.date+(a.createdAt||'')));
+
+    title.textContent=`${monthText(selectedMonth)}收入明細`;
+
+    if(!rows.length){
+      body.innerHTML='<div class="empty">這個月份沒有收入紀錄。</div>';
+    }else{
+      const total=rows.reduce((s,t)=>s+Number(t.amount||0),0);
+      body.innerHTML=
+        `<div class="overview-detail-list">`+
+        rows.map(t=>{
+          const account=data.banks.find(b=>b.id===t.accountId)?.name||'—';
+          const desc=[t.category||'',t.note||''].filter(Boolean).join('｜')||'收入';
+          return `<div class="overview-detail-row">
+            <div class="meta">${esc(t.date||'')}</div>
+            <div class="overview-detail-main">
+              <div class="overview-detail-title">${esc(account)}</div>
+              <div class="overview-detail-meta">${esc(desc)}</div>
+            </div>
+            <div class="overview-detail-amount money pos">+${money(t.amount)}</div>
+          </div>`;
+        }).join('')+
+        `</div><div class="overview-detail-total"><span>本月收入合計</span><span>${money(total)}</span></div>`;
+    }
+  }
+
+  if(type==='card'){
+    const monthRows=data.transactions.filter(
+      t=>t.type==='card'&&cardUseMonth(t)===selectedMonth
+    );
+
+    title.textContent=`${monthText(selectedMonth)}各信用卡總刷費`;
+
+    if(!data.cards.length){
+      body.innerHTML='<div class="empty">尚未設定信用卡。</div>';
+    }else{
+      const summaries=data.cards.map(c=>{
+        const rows=monthRows.filter(t=>t.accountId===c.id);
+        return {
+          name:c.name,
+          count:rows.length,
+          total:rows.reduce((s,t)=>s+Number(t.amount||0),0)
+        };
+      }).filter(x=>x.count>0||x.total>0);
+
+      if(!summaries.length){
+        body.innerHTML='<div class="empty">這個月份沒有信用卡刷費。</div>';
+      }else{
+        const grandTotal=summaries.reduce((s,x)=>s+x.total,0);
+        const grandCount=summaries.reduce((s,x)=>s+x.count,0);
+        body.innerHTML=
+          summaries.map(x=>`<div class="card-summary-row">
+            <div>
+              <div class="overview-detail-title">${esc(x.name)}</div>
+              <div class="overview-detail-meta">${x.count} 筆刷卡</div>
+            </div>
+            <div class="overview-detail-amount">${money(x.total)}</div>
+          </div>`).join('')+
+          `<div class="overview-detail-total"><span>合計 ${grandCount} 筆</span><span>${money(grandTotal)}</span></div>`;
+      }
+    }
+  }
+
+  modal.classList.add('show');
+}
+
+function closeOverviewDetail(){
+  const modal=document.getElementById('overviewDetailModal');
+  if(modal)modal.classList.remove('show');
+}
+
 async function toggleCardPaid(cardId){
   const card=data.cards.find(c=>c.id===cardId);
   if(!card)return;
