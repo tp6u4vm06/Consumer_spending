@@ -333,6 +333,23 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
   .overview-detail-row{grid-template-columns:70px 1fr auto;gap:8px}
 }
 
+
+/* ===== 銀行交易紀錄 ===== */
+.bank-item.clickable-bank{cursor:pointer;transition:background .12s ease,transform .12s ease}
+.bank-item.clickable-bank:hover{background:#f8fafc}
+.bank-item.clickable-bank:active{transform:scale(.998)}
+.bank-history-toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap}
+.bank-history-toolbar select{padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:14px}
+.bank-history-summary{font-size:12px;color:var(--muted)}
+.bank-history-list{margin-top:4px}
+.bank-history-row{display:grid;grid-template-columns:86px 1fr auto;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+.bank-history-row:last-child{border-bottom:0}
+.bank-history-title{font-weight:750}
+.bank-history-meta{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.45}
+.bank-history-amount{font-weight:800;text-align:right;white-space:nowrap}
+.bank-history-balance{display:flex;justify-content:space-between;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-weight:800}
+@media(max-width:620px){.bank-history-row{grid-template-columns:68px 1fr auto;gap:8px}}
+
 </style>
 </head>
 <body>
@@ -427,6 +444,27 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
   </div>
 </div>
 
+
+
+<div id="bankHistoryModal" class="modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="bankHistoryTitle">銀行紀錄</h3>
+      <button class="close" onclick="closeBankHistory()">關閉</button>
+    </div>
+    <div class="bank-history-toolbar">
+      <div class="field" style="margin:0;min-width:170px">
+        <label>顯示範圍</label>
+        <select id="bankHistoryFilter" onchange="renderBankHistory()">
+          <option value="month">目前選擇月份</option>
+          <option value="all">全部紀錄</option>
+        </select>
+      </div>
+      <div id="bankHistorySummary" class="bank-history-summary"></div>
+    </div>
+    <div id="bankHistoryBody"></div>
+  </div>
+</div>
 
 <div id="overviewDetailModal" class="modal">
   <div class="modal-box">
@@ -857,7 +895,7 @@ function render(){
   bankList.innerHTML=data.banks.map(b=>{
     const balance=bankBalanceAtMonth(b.id,selectedMonth);
     const balanceClass=balance>=100000?'balance-high':balance<=20000?'balance-low':'balance-mid';
-    return `<div class="bank-item"><div><div class="name">${esc(b.name)}</div><div class="meta">${monthText(selectedMonth)}月底</div></div><div class="money ${balanceClass}">${money(balance)}</div></div>`;
+    return `<div class="bank-item clickable-bank" onclick="openBankHistory('${b.id}')" title="點擊查看銀行紀錄"><div><div class="name">${esc(b.name)}</div><div class="meta">${monthText(selectedMonth)}月底｜點擊看紀錄</div></div><div class="money ${balanceClass}">${money(balance)}</div></div>`;
   }).join('')||'<div class="empty">尚未設定銀行</div>';
   cardList.innerHTML=data.cards.map(c=>{
     const cardTx=cardMonth.filter(t=>t.accountId===c.id);
@@ -883,6 +921,94 @@ function render(){
   }).join('')||'<div class="empty">尚未設定信用卡</div>';
   renderTransactions();refreshAccounts();renderBankSettings();renderCardSettings();
 }
+
+
+let activeBankHistoryId=null;
+
+function openBankHistory(bankId){
+  const bank=data.banks.find(b=>b.id===bankId);
+  if(!bank)return;
+  activeBankHistoryId=bankId;
+  bankHistoryTitle.textContent=`${bank.name}｜交易紀錄`;
+  bankHistoryFilter.value='month';
+  renderBankHistory();
+  bankHistoryModal.classList.add('show');
+}
+
+function closeBankHistory(){
+  bankHistoryModal.classList.remove('show');
+  activeBankHistoryId=null;
+}
+
+function bankTransactionEffect(t,bankId){
+  const amount=Number(t.amount||0);
+
+  if(t.type==='income'&&t.accountId===bankId)return {direction:'in',amount,label:'收入'};
+  if(t.type==='expense'&&t.accountId===bankId)return {direction:'out',amount,label:'支出'};
+  if(t.type==='cardpay'&&t.accountId===bankId)return {direction:'out',amount,label:'繳卡費'};
+
+  if(t.type==='transfer'){
+    if(t.accountId===bankId){
+      const to=data.banks.find(b=>b.id===t.toAccountId)?.name||'其他帳戶';
+      return {direction:'out',amount,label:`轉出至 ${to}`};
+    }
+    if(t.toAccountId===bankId){
+      const from=data.banks.find(b=>b.id===t.accountId)?.name||'其他帳戶';
+      return {direction:'in',amount,label:`由 ${from} 轉入`};
+    }
+  }
+  return null;
+}
+
+function renderBankHistory(){
+  if(!activeBankHistoryId)return;
+  const bank=data.banks.find(b=>b.id===activeBankHistoryId);
+  if(!bank)return;
+
+  const mode=bankHistoryFilter.value;
+
+  const rows=data.transactions
+    .map(t=>({t,effect:bankTransactionEffect(t,activeBankHistoryId)}))
+    .filter(x=>x.effect)
+    .filter(x=>mode==='all'||x.t.date?.slice(0,7)===selectedMonth)
+    .sort((a,b)=>(b.t.date+(b.t.createdAt||'')).localeCompare(a.t.date+(a.t.createdAt||'')));
+
+  bankHistorySummary.textContent=
+    mode==='all'
+      ? `全部共 ${rows.length} 筆`
+      : `${monthText(selectedMonth)}共 ${rows.length} 筆`;
+
+  if(!rows.length){
+    bankHistoryBody.innerHTML=`<div class="empty">${mode==='all'?'目前沒有交易紀錄':'這個月份沒有交易紀錄'}</div>`;
+    return;
+  }
+
+  const list=rows.map(({t,effect})=>{
+    const sign=effect.direction==='in'?'+':'-';
+    const cls=effect.direction==='in'?'pos':'neg';
+    const detail=t.note||t.category||effect.label;
+
+    return `<div class="bank-history-row">
+      <div class="meta">${esc(t.date||'')}</div>
+      <div>
+        <div class="bank-history-title">${esc(effect.label)}</div>
+        <div class="bank-history-meta">${esc(detail)}</div>
+      </div>
+      <div class="bank-history-amount money ${cls}">${sign}${money(effect.amount)}</div>
+    </div>`;
+  }).join('');
+
+  const balance=mode==='all'
+    ? bankBalance(activeBankHistoryId)
+    : bankBalanceAtMonth(activeBankHistoryId,selectedMonth);
+
+  const label=mode==='all'?'目前餘額':`${monthText(selectedMonth)}月底餘額`;
+
+  bankHistoryBody.innerHTML=
+    `<div class="bank-history-list">${list}</div>
+     <div class="bank-history-balance"><span>${label}</span><span>${money(balance)}</span></div>`;
+}
+
 
 function openOverviewDetail(type){
   const modal=document.getElementById('overviewDetailModal');
@@ -1218,7 +1344,13 @@ eAccount.addEventListener('change',refreshEditTransferTargets);
 async function delTx(id){if(confirm('確定刪除這筆紀錄？')){data.transactions=data.transactions.filter(t=>t.id!==id);await save(true)}}
 function renderBankSettings(){bankSettings.innerHTML=data.banks.map((b,i)=>`<div class="form-grid" style="grid-template-columns:1fr 1fr;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #eee"><div class="field"><label>銀行名稱</label><input value="${attr(b.name)}" onchange="data.banks[${i}].name=this.value;save(true)"></div><div class="field"><label>初始餘額</label><input type="number" step="0.1" value="${b.initial}" onchange="data.banks[${i}].initial=Number(this.value);save(true)"></div><div style="grid-column:1/-1"><button class="danger small" onclick="removeBank('${b.id}')">刪除銀行</button></div></div>`).join('')}
 function renderCardSettings(){cardSettings.innerHTML=data.cards.map((c,i)=>`<div class="form-grid" style="grid-template-columns:1fr 1fr;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #eee"><div class="field"><label>信用卡名稱</label><input value="${attr(c.name)}" onchange="data.cards[${i}].name=this.value;save(true)"></div><div class="field"><label>信用額度</label><input type="number" value="${c.limit}" onchange="data.cards[${i}].limit=Number(this.value);save(true)"></div><div style="grid-column:1/-1"><button class="danger small" onclick="removeCard('${c.id}')">刪除信用卡</button></div></div>`).join('')}
-async function addBank(){data.banks.push({id:'bank-'+Date.now(),name:'新銀行',initial:0});await save(true)}async function addCard(){data.cards.push({id:'card-'+Date.now(),name:'新信用卡',limit:0,paidMonths:[]});await save(true)}
+async function addBank(){
+  data.banks.push({id:'bank-'+Date.now(),name:'新銀行',initial:0});
+  renderBankSettings();
+  refreshAccounts();
+  await save(true);
+  render();
+}async function addCard(){data.cards.push({id:'card-'+Date.now(),name:'新信用卡',limit:0,paidMonths:[]});await save(true)}
 async function removeBank(id){if(data.transactions.some(t=>t.accountId===id))return toast('此銀行已有交易，請先刪除相關交易');data.banks=data.banks.filter(x=>x.id!==id);await save(true)}async function removeCard(id){if(data.transactions.some(t=>t.accountId===id))return toast('此信用卡已有交易，請先刪除相關交易');data.cards=data.cards.filter(x=>x.id!==id);await save(true)}
 function openBankModal(){bankModal.classList.add('show')}function openCardModal(){cardModal.classList.add('show')}function closeModal(id){document.getElementById(id).classList.remove('show')}
 function exportData(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`finance-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
