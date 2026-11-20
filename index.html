@@ -420,7 +420,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
       <div class="card kpi"><div class="privacy-row"><div class="label">所選月份銀行總額</div><button id="privacyBtn" class="secondary privacy-btn" onclick="toggleBankTotal()">顯示</button></div><div class="value masked" id="kBank">••••••</div><div class="sub" id="kBankSub">月底餘額</div></div>
       <div class="card kpi kpi-clickable" onclick="openOverviewDetail('card')" title="點擊查看各張信用卡總刷費"><div class="label">所選月份信用卡刷費</div><div class="value" id="kCard">$0</div><div class="sub" id="kCardSub">點擊查看各卡合計</div></div>
       <div class="card kpi kpi-clickable" onclick="openOverviewDetail('income')" title="點擊查看收入明細"><div class="label">所選月份收入</div><div class="value" id="kIncome">$0</div><div class="sub" id="kIncomeSub">點擊查看明細</div></div>
-      <div class="card kpi"><div class="label">所選月份現金支出</div><div class="value" id="kExpense">$0</div><div class="sub">不含信用卡刷費</div></div>
+      <div class="card kpi kpi-clickable" onclick="openOverviewDetail('expense')" title="點擊查看銀行支出明細"><div class="label">所選月份銀行／現金支出</div><div class="value" id="kExpense">$0</div><div class="sub">不含信用卡刷費｜點擊查看明細</div></div>
       <div class="card span12">
         <div class="section-title"><h2>各家銀行月底餘額</h2><span id="bankBalanceMonthLabel"></span></div>
         <div id="bankList" class="bank-grid"></div>
@@ -428,7 +428,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;colo
     </div>
   </div>
   <div class="footer-note">主要資料儲存在 Supabase 雲端，同一帳號在手機、電腦與不同瀏覽器會讀取同一份紀錄；瀏覽器 LocalStorage 僅作為暫存與離線備援。建議仍定期匯出 Excel。</div>
-  <div class="app-version" id="appVersion">版本：2026.11.12.0829</div>
+  <div class="app-version" id="appVersion">版本：2026.11.20.0947</div>
 </div>
 
 <div id="authGate" class="auth-gate">
@@ -1046,6 +1046,23 @@ function openOverviewDetail(type){
     }
   }
 
+  if(type==='expense'){
+    title.textContent=`銀行／現金支出明細`;
+    body.innerHTML=
+      `<div class="bank-history-toolbar">
+        <div class="field" style="margin:0;min-width:170px">
+          <label>顯示範圍</label>
+          <select id="expenseDetailFilter" onchange="renderExpenseOverviewDetail()">
+            <option value="month">目前選擇月份（${monthText(selectedMonth)}）</option>
+            <option value="all">全部紀錄</option>
+          </select>
+        </div>
+        <div id="expenseDetailSummary" class="bank-history-summary"></div>
+      </div>
+      <div id="expenseDetailList"></div>`;
+    renderExpenseOverviewDetail();
+  }
+
   if(type==='card'){
     const monthRows=data.transactions.filter(
       t=>t.type==='card'&&cardUseMonth(t)===selectedMonth
@@ -1084,6 +1101,45 @@ function openOverviewDetail(type){
   }
 
   modal.classList.add('show');
+}
+
+function renderExpenseOverviewDetail(){
+  const filter=document.getElementById('expenseDetailFilter');
+  const summary=document.getElementById('expenseDetailSummary');
+  const list=document.getElementById('expenseDetailList');
+  if(!filter||!summary||!list)return;
+
+  const mode=filter.value;
+  const rows=data.transactions
+    .filter(t=>t.type==='expense')
+    .filter(t=>mode==='all'||t.date?.slice(0,7)===selectedMonth)
+    .sort((a,b)=>(b.date+(b.createdAt||'')).localeCompare(a.date+(a.createdAt||'')));
+
+  const total=rows.reduce((sum,t)=>sum+Number(t.amount||0),0);
+  summary.textContent=mode==='all'
+    ? `全部紀錄｜${rows.length} 筆`
+    : `${monthText(selectedMonth)}｜${rows.length} 筆`;
+
+  if(!rows.length){
+    list.innerHTML=`<div class="empty">${mode==='all'?'目前沒有銀行支出紀錄':`${monthText(selectedMonth)}沒有銀行支出紀錄`}</div>`;
+    return;
+  }
+
+  list.innerHTML=
+    `<div class="overview-detail-list">`+
+    rows.map(t=>{
+      const account=data.banks.find(b=>b.id===t.accountId)?.name||'未指定銀行';
+      const desc=[t.category||'支出',t.note||''].filter(Boolean).join('｜');
+      return `<div class="overview-detail-row">
+        <div class="meta">${esc(t.date||'')}</div>
+        <div class="overview-detail-main">
+          <div class="overview-detail-title">${esc(account)}</div>
+          <div class="overview-detail-meta">${esc(desc)}</div>
+        </div>
+        <div class="overview-detail-amount money neg">-${money(t.amount)}</div>
+      </div>`;
+    }).join('')+
+    `</div><div class="overview-detail-total"><span>支出合計（${rows.length} 筆）</span><span>${money(total)}</span></div>`;
 }
 
 function closeOverviewDetail(){
